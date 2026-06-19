@@ -547,6 +547,12 @@ button:disabled {
   font-family: inherit;
 }
 
+/* Shorten zoom animation from Leaflet's default 0.25 s so the CSS-scaled
+   frame (the source of perceived blur) is visible for less time. */
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  transition-duration: 0.15s;
+}
+
 .leaflet-popup-content-wrapper {
   border-radius: var(--r-md) !important;
   box-shadow: var(--shadow-drawer) !important;

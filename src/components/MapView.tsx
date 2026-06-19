@@ -27,11 +27,21 @@ export function MapView({ features }: { features: FeatureRecord[] }) {
     <MapContainer
       center={[38.9072, -77.0369]}
       className="map-canvas"
+      // Canvas renderer keeps dots crisp during zoom; SVG pane gets CSS-scaled
+      // as a rasterized bitmap before re-rendering, which causes blur.
+      preferCanvas
       zoom={12}
       zoomControl={false}
+      // Half-level zoom steps reduce the CSS scale factor per animation frame
+      // (1.41× instead of 2×), so dots stay readable mid-animation.
+      zoomDelta={0.5}
+      zoomSnap={0.5}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        // Don't request new tiles mid-animation; load them once zoom settles.
+        keepBuffer={3}
+        updateWhenZooming={false}
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {features.map((feature) => {
