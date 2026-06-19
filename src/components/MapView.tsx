@@ -2,8 +2,25 @@
 
 import { MapContainer, TileLayer, CircleMarker, Polyline, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { sourceTypeColor } from "@/lib/design";
+import { sourceTypeColor, sourceTypeLabel } from "@/lib/design";
 import type { FeatureRecord } from "@/lib/types";
+
+function FeaturePopup({ feature }: { feature: FeatureRecord }) {
+  return (
+    <div className="map-popup">
+      <p className="map-popup-name">{feature.name}</p>
+      <div className="map-popup-meta">
+        <span className={`badge ${feature.status}`}>{feature.status}</span>
+        <span className="badge">
+          {feature.mode ?? sourceTypeLabel[feature.source_type] ?? feature.source_type}
+        </span>
+      </div>
+      <a className="map-popup-link" href={`/features/${feature.id}`}>
+        View project →
+      </a>
+    </div>
+  );
+}
 
 export function MapView({ features }: { features: FeatureRecord[] }) {
   return (
@@ -29,12 +46,8 @@ export function MapView({ features }: { features: FeatureRecord[] }) {
               pathOptions={{ color: "#fff", fillColor: color, fillOpacity: 0.9, weight: 2 }}
               radius={9}
             >
-              <Popup>
-                <strong>{feature.name}</strong>
-                <br />
-                <a className="map-popup-link" href={`/features/${feature.id}`}>
-                  View project →
-                </a>
+              <Popup autoPan={false} maxWidth={220} minWidth={180}>
+                <FeaturePopup feature={feature} />
               </Popup>
             </CircleMarker>
           );
@@ -50,12 +63,8 @@ export function MapView({ features }: { features: FeatureRecord[] }) {
               pathOptions={{ color, opacity: 0.85, weight: 5 }}
               positions={positions}
             >
-              <Popup>
-                <strong>{feature.name}</strong>
-                <br />
-                <a className="map-popup-link" href={`/features/${feature.id}`}>
-                  View project →
-                </a>
+              <Popup autoPan={false} maxWidth={220} minWidth={180}>
+                <FeaturePopup feature={feature} />
               </Popup>
             </Polyline>
           );
