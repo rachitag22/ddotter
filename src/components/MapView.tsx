@@ -2,20 +2,15 @@
 
 import { MapContainer, TileLayer, CircleMarker, Polyline, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
+import { sourceTypeColor } from "@/lib/design";
 import type { FeatureRecord } from "@/lib/types";
-
-const TYPE_COLOR: Record<string, string> = {
-  capital_project: "#147b58",
-  trail_project: "#2767b1",
-  art_installation: "#b26a00",
-};
 
 export function MapView({ features }: { features: FeatureRecord[] }) {
   return (
     <MapContainer
       center={[38.9072, -77.0369]}
+      className="map-canvas"
       zoom={12}
-      style={{ position: "fixed", inset: 0, zIndex: 0 }}
       zoomControl={false}
     >
       <TileLayer
@@ -23,7 +18,7 @@ export function MapView({ features }: { features: FeatureRecord[] }) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {features.map((feature) => {
-        const color = TYPE_COLOR[feature.source_type] ?? "#147b58";
+        const color = sourceTypeColor[feature.source_type] ?? sourceTypeColor.capital_project;
 
         if (feature.geometry.type === "Point") {
           const [lng, lat] = feature.geometry.coordinates;
@@ -37,7 +32,7 @@ export function MapView({ features }: { features: FeatureRecord[] }) {
               <Popup>
                 <strong>{feature.name}</strong>
                 <br />
-                <a href={`/features/${feature.id}`} style={{ color }}>
+                <a className="map-popup-link" href={`/features/${feature.id}`}>
                   View project →
                 </a>
               </Popup>
@@ -58,7 +53,7 @@ export function MapView({ features }: { features: FeatureRecord[] }) {
               <Popup>
                 <strong>{feature.name}</strong>
                 <br />
-                <a href={`/features/${feature.id}`} style={{ color }}>
+                <a className="map-popup-link" href={`/features/${feature.id}`}>
                   View project →
                 </a>
               </Popup>

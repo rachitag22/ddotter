@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { sourceTypeLabel } from "@/lib/design";
 import type { FeatureRecord, FeatureFilters } from "@/lib/types";
 
 type DrawerState = "peek" | "half" | "full";
@@ -168,7 +169,7 @@ export function BottomDrawer({
                 <span className={`badge ${feature.status}`}>{feature.status}</span>
                 <span className="badge">Ward {feature.ward ?? "?"}</span>
                 <span className="badge">
-                  {feature.mode ?? feature.source_type.replaceAll("_", " ")}
+                  {feature.mode ?? sourceTypeLabel[feature.source_type] ?? feature.source_type}
                 </span>
               </div>
               <h2>{feature.name}</h2>
