@@ -31,20 +31,29 @@ export async function getFeatures(filters: FeatureFilters = {}) {
   }
 
   const supabase = getSupabaseServerClient();
-  let query = supabase
-    .from("features_with_feedback")
-    .select("*")
-    .order("synced_at", { ascending: false });
+  const pageSize = 1000;
+  const features: FeatureRecord[] = [];
 
-  if (filters.type) query = query.eq("source_type", filters.type);
-  if (filters.ward) query = query.eq("ward", filters.ward);
-  if (filters.status) query = query.eq("status", filters.status);
-  if (filters.q) query = query.or(`name.ilike.%${filters.q}%,description.ilike.%${filters.q}%`);
+  for (let from = 0; ; from += pageSize) {
+    let query = supabase
+      .from("features_with_feedback")
+      .select("*")
+      .order("synced_at", { ascending: false })
+      .range(from, from + pageSize - 1);
 
-  const { data, error } = await query;
-  if (error) throw error;
+    if (filters.type) query = query.eq("source_type", filters.type);
+    if (filters.ward) query = query.eq("ward", filters.ward);
+    if (filters.status) query = query.eq("status", filters.status);
+    if (filters.q) query = query.or(`name.ilike.%${filters.q}%,description.ilike.%${filters.q}%`);
 
-  return (data ?? []) as FeatureRecord[];
+    const { data, error } = await query;
+    if (error) throw error;
+
+    features.push(...((data ?? []) as FeatureRecord[]));
+    if (!data || data.length < pageSize) break;
+  }
+
+  return features;
 }
 
 export async function getFeature(id: string) {
