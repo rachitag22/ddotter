@@ -27,6 +27,10 @@ export default async function Home({ searchParams }: PageProps) {
     q: first(params.q),
   };
   const features = await getFeatures(filters);
+  const statusCounts = features.reduce<Record<string, number>>((counts, feature) => {
+    counts[feature.status] = (counts[feature.status] ?? 0) + 1;
+    return counts;
+  }, {});
 
   return (
     <div className="shell">
@@ -80,6 +84,12 @@ export default async function Home({ searchParams }: PageProps) {
             </label>
             <button type="submit">Apply filters</button>
           </form>
+          <div className="filter-summary">
+            <strong>{features.length.toLocaleString()}</strong> projects shown
+            <span>{statusCounts.planned ?? 0} planned</span>
+            <span>{statusCounts.active ?? 0} active</span>
+            <span>{statusCounts.complete ?? 0} complete</span>
+          </div>
         </aside>
 
         <section className="content">

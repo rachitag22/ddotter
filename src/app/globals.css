@@ -100,6 +100,20 @@ button,
   gap: 12px;
 }
 
+.filter-summary {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  display: grid;
+  gap: 6px;
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.filter-summary strong {
+  color: var(--text);
+  font-size: 1.4rem;
+}
+
 .filters label,
 .feedback-form label {
   color: var(--muted);
