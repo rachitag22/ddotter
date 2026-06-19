@@ -44,7 +44,45 @@ SUPABASE_SERVICE_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SYNC_SECRET=
+CRON_SECRET=
 ```
+
+## Local Development
+
+```bash
+pnpm install
+pnpm dev
+```
+
+The app renders sample DDOT project data when Supabase environment variables are missing. Once Supabase is configured, API routes read from the database through the server client.
+
+## Supabase
+
+The initial schema lives in `supabase/migrations/202606190001_initial_schema.sql`.
+
+It creates:
+
+- `features`
+- `feedback`
+- `sync_log`
+- `features_with_feedback`
+
+The linked Supabase project is `ddotter` at `https://kbcnqovbzwixdxzpaday.supabase.co`.
+
+The first migration has been applied to project ref `kbcnqovbzwixdxzpaday`. `supabase/seed.sql` contains demo records for local development and first-run verification.
+
+## Vercel
+
+`vercel.json` defines an hourly cron trigger for `/api/sync`.
+
+The connected Vercel account has a `ddotter` project. Production deploys should set:
+
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_KEY`
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SYNC_SECRET`
+- `CRON_SECRET`, optional; if set, Vercel Cron sends it as a bearer token
 
 ## First Build Notes
 
