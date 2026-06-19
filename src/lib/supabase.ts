@@ -32,3 +32,21 @@ export function getSupabaseServerClient() {
 
   return serverClient;
 }
+
+export function getSupabaseSyncClient() {
+  const key = getSupabaseServerKey();
+
+  if (!process.env.SUPABASE_URL || !key) {
+    throw new Error("Supabase server environment is not configured.");
+  }
+
+  return createClient(process.env.SUPABASE_URL, key, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+    global: {
+      headers: process.env.SYNC_SECRET ? { "x-sync-secret": process.env.SYNC_SECRET } : {},
+    },
+  });
+}
