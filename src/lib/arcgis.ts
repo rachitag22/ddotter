@@ -19,6 +19,14 @@ type SyncSourceResult = {
 
 const CAPITAL_PROJECTS_URL =
   "https://maps2.dcgis.dc.gov/dcgis/rest/services/DDOT/PTP/FeatureServer/0/query";
+const BIKE_LANES_URL =
+  "https://maps2.dcgis.dc.gov/dcgis/rest/services/DDOT/BikeLane/FeatureServer/0/query";
+const EXISTING_BIKE_TRAILS_URL =
+  "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Transportation_Bikes_Trails_WebMercator/MapServer/4/query";
+const PLANNED_MULTI_USE_TRAILS_URL =
+  "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Transportation_Bikes_Trails_WebMercator/MapServer/1/query";
+const MEMORIALS_URL =
+  "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Cultural_and_Society_WebMercator/MapServer/55/query";
 
 function asString(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
@@ -42,11 +50,33 @@ function asDate(value: unknown) {
 function normalizeStatus(value: unknown): ProjectStatus {
   const status = String(value ?? "").toLowerCase();
 
-  if (status === "0" || status.includes("proposed") || status.includes("planned")) return "planned";
-  if (status.includes("construction") || status.includes("active")) return "active";
-  if (status.includes("complete") || status.includes("built")) return "complete";
+  if (
+    status === "0" ||
+    status.includes("proposed") ||
+    status.includes("planned") ||
+    status.includes("future")
+  ) {
+    return "planned";
+  }
+  if (
+    status.includes("construction") ||
+    status.includes("active") ||
+    status.includes("pending ntp") ||
+    status.includes("notice to proceed")
+  ) {
+    return "active";
+  }
+  if (status.includes("design") || status.includes("planning")) return "planned";
+  if (status.includes("complete") || status.includes("built") || status.includes("existing")) return "complete";
 
   return "unknown";
+}
+
+function pick(raw: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    if (raw[key] !== null && raw[key] !== undefined && raw[key] !== "") return raw[key];
+  }
+  return null;
 }
 
 function normalizeCapitalProject(feature: ArcGisFeature): FeatureRecord | null {
@@ -75,7 +105,130 @@ function normalizeCapitalProject(feature: ArcGisFeature): FeatureRecord | null {
   };
 }
 
-async function fetchArcGisFeatures(url: string) {
+function normalizeBikeLane(feature: ArcGisFeature): FeatureRecord | null {
+  const raw = feature.properties;
+  const objectId = asString(raw.ObjectID);
+  const label = asString(raw.Label);
+  const routeName = asString(raw.RouteName);
+  const project = asString(raw.Project);
+  const name = project?.trim() || label || routeName;
+
+  if (!objectId || !name || !feature.geometry) return null;
+
+  return {
+    id: `bike-lane-${objectId}`,
+    source_type: "bike_lane",
+    source_id: objectId,
+    name,
+    status: normalizeStatus(raw.ProjectWorkStatus),
+    ward: null,
+    mode: asString(raw.Facility) ?? asString(raw.Asset) ?? "Bike lane",
+    description: asString(raw.Description) ?? label,
+    timeline_start: asDate(raw.CreatedDate),
+    timeline_end: asDate(raw.ProjectCompletedDate) ?? asDate(raw.LastUpdatedDate),
+    cost: null,
+    official_url: asString(raw.ProjectURL),
+    geometry: feature.geometry,
+    raw,
+    synced_at: new Date().toISOString(),
+  };
+}
+
+function normalizeExistingTrail(feature: ArcGisFeature): FeatureRecord | null {
+  const raw = feature.properties;
+  const objectId = asString(raw.OBJECTID);
+  const name = asString(raw.TRAIL_NAME) ?? asString(raw.NAME);
+
+  if (!objectId || !name || !feature.geometry) return null;
+
+  return {
+    id: `trail-existing-${objectId}`,
+    source_type: "trail_project",
+    source_id: `existing-${objectId}`,
+    name,
+    status: "complete",
+    ward: asString(raw.WARDS),
+    mode: asString(raw.TRAIL_CLASS) ?? asString(raw.SURFACE_TYPE) ?? "Trail",
+    description: [
+      asString(raw.TRAIL_SEGMENT) ? `Segment: ${asString(raw.TRAIL_SEGMENT)}` : null,
+      asString(raw.SURFACE_TYPE) ? `Surface: ${asString(raw.SURFACE_TYPE)}` : null,
+      asString(raw.MAINTENANCE) ? `Maintained by ${asString(raw.MAINTENANCE)}` : null,
+    ]
+      .filter(Boolean)
+      .join(". "),
+    timeline_start: raw.YEAR_CONSTRUCTED ? `${asString(raw.YEAR_CONSTRUCTED)}-01-01` : null,
+    timeline_end: null,
+    cost: null,
+    official_url: null,
+    geometry: feature.geometry,
+    raw,
+    synced_at: new Date().toISOString(),
+  };
+}
+
+function normalizePlannedTrail(feature: ArcGisFeature): FeatureRecord | null {
+  const raw = feature.properties;
+  const objectId = asString(raw.OBJECTID);
+  const name = asString(raw.TRAIL_NAME) ?? asString(raw.ALETERNATE_NAME);
+
+  if (!objectId || !name || !feature.geometry) return null;
+
+  return {
+    id: `trail-planned-${objectId}`,
+    source_type: "trail_project",
+    source_id: `planned-${objectId}`,
+    name,
+    status: normalizeStatus(raw.STATUS),
+    ward: asString(raw.WARDS),
+    mode: asString(raw.USE_TYPE) ?? "Planned multi-use trail",
+    description: [
+      asString(raw.TRAIL_SEGMENT) ? `Segment: ${asString(raw.TRAIL_SEGMENT)}` : null,
+      asNumber(raw.LENGTH) ? `Length: ${Math.round(asNumber(raw.LENGTH) ?? 0).toLocaleString()} ft` : null,
+    ]
+      .filter(Boolean)
+      .join(". "),
+    timeline_start: asDate(raw.CREATED_DATE),
+    timeline_end: asDate(raw.LAST_EDITED_DATE),
+    cost: null,
+    official_url: null,
+    geometry: feature.geometry,
+    raw,
+    synced_at: new Date().toISOString(),
+  };
+}
+
+function normalizeMemorial(feature: ArcGisFeature): FeatureRecord | null {
+  const raw = feature.properties;
+  const objectId = asString(pick(raw, "DCGIS.PLACE_NAMES_PT.OBJECTID", "OBJECTID"));
+  const name = asString(pick(raw, "DCGIS.PLACE_NAMES_PT.NAME", "NAME"));
+
+  if (!objectId || !name || !feature.geometry) return null;
+
+  return {
+    id: `art-installation-${objectId}`,
+    source_type: "art_installation",
+    source_id: objectId,
+    name,
+    status: normalizeStatus(pick(raw, "DCGIS.PLACE_NAMES_PT.STATUS", "STATUS")),
+    ward: asString(pick(raw, "DCGIS.ADDRESSES_PT.WARD", "WARD")),
+    mode: asString(pick(raw, "MAR.VW_PLACE_NAME_CATEGORIES.CATEGORY", "CATEGORY")) ?? "Memorial",
+    description: asString(pick(raw, "DCGIS.ADDRESSES_PT.ADDRESS", "ADDRESS")),
+    timeline_start: asDate(pick(raw, "DCGIS.PLACE_NAMES_PT.BEGIN_DATE", "BEGIN_DATE")),
+    timeline_end: null,
+    cost: null,
+    official_url: null,
+    geometry: feature.geometry,
+    raw: {
+      ...raw,
+      source_note:
+        "DCGIS Memorials layer, used as the initial art/cultural installation feed until a dedicated public art installation dataset is identified.",
+    },
+    synced_at: new Date().toISOString(),
+  };
+}
+
+async function fetchArcGisFeatures(url: string, options: { paginate?: boolean } = {}) {
+  const paginate = options.paginate ?? true;
   const pageSize = 1000;
   const features: ArcGisFeature[] = [];
 
@@ -86,9 +239,12 @@ async function fetchArcGisFeatures(url: string) {
       returnGeometry: "true",
       outSR: "4326",
       f: "geojson",
-      resultOffset: String(offset),
-      resultRecordCount: String(pageSize),
     });
+
+    if (paginate) {
+      params.set("resultOffset", String(offset));
+      params.set("resultRecordCount", String(pageSize));
+    }
 
     const response = await fetch(`${url}?${params.toString()}`);
 
@@ -97,10 +253,14 @@ async function fetchArcGisFeatures(url: string) {
     }
 
     const data = (await response.json()) as ArcGisFeatureCollection;
+    if ("error" in data) {
+      throw new Error(JSON.stringify(data.error));
+    }
+
     const page = data.features ?? [];
     features.push(...page);
 
-    if (page.length < pageSize) break;
+    if (!paginate || page.length < pageSize) break;
   }
 
   return features;
@@ -111,11 +271,34 @@ export async function fetchCapitalProjects() {
   return features.map(normalizeCapitalProject).filter((feature): feature is FeatureRecord => Boolean(feature));
 }
 
+export async function fetchBikeLanes() {
+  const features = await fetchArcGisFeatures(BIKE_LANES_URL, { paginate: true });
+  return features.map(normalizeBikeLane).filter((feature): feature is FeatureRecord => Boolean(feature));
+}
+
+export async function fetchTrailProjects() {
+  const [existingTrails, plannedTrails] = await Promise.all([
+    fetchArcGisFeatures(EXISTING_BIKE_TRAILS_URL, { paginate: false }),
+    fetchArcGisFeatures(PLANNED_MULTI_USE_TRAILS_URL, { paginate: false }),
+  ]);
+
+  return [
+    ...existingTrails.map(normalizeExistingTrail),
+    ...plannedTrails.map(normalizePlannedTrail),
+  ].filter((feature): feature is FeatureRecord => Boolean(feature));
+}
+
+export async function fetchArtInstallations() {
+  const features = await fetchArcGisFeatures(MEMORIALS_URL, { paginate: false });
+  return features.map(normalizeMemorial).filter((feature): feature is FeatureRecord => Boolean(feature));
+}
+
 export async function fetchAllArcGisFeatures() {
   return {
     capitalProjects: await fetchCapitalProjects(),
-    trailProjects: [] as FeatureRecord[],
-    artInstallations: [] as FeatureRecord[],
+    bikeLanes: await fetchBikeLanes(),
+    trailProjects: await fetchTrailProjects(),
+    artInstallations: await fetchArtInstallations(),
   };
 }
 

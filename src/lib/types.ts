@@ -1,9 +1,10 @@
-export type SourceType = "capital_project" | "trail_project" | "art_installation";
+export type SourceType = "capital_project" | "bike_lane" | "trail_project" | "art_installation";
 export type ProjectStatus = "active" | "planned" | "complete" | "unknown";
 
 export type Geometry =
   | { type: "Point"; coordinates: [number, number] }
-  | { type: "LineString"; coordinates: [number, number][] };
+  | { type: "LineString"; coordinates: [number, number][] }
+  | { type: "MultiLineString"; coordinates: [number, number][][] };
 
 export type FeatureRecord = {
   id: string;

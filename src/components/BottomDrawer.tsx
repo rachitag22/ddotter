@@ -138,8 +138,9 @@ export function BottomDrawer({
             <select className="filter-select" defaultValue={filters.type ?? ""} name="type">
               <option value="">All types</option>
               <option value="capital_project">Capital</option>
+              <option value="bike_lane">Bike lane</option>
               <option value="trail_project">Trail</option>
-              <option value="art_installation">Art</option>
+              <option value="art_installation">Art / memorial</option>
             </select>
             <select className="filter-select" defaultValue={filters.ward ?? ""} name="ward">
               <option value="">All wards</option>
