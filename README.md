@@ -41,6 +41,7 @@ Copy `.env.example` to `.env.local` when the app scaffold exists.
 ```bash
 SUPABASE_URL=
 SUPABASE_SERVICE_KEY=
+SUPABASE_ANON_KEY=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SYNC_SECRET=
@@ -78,7 +79,8 @@ The first migration has been applied to project ref `kbcnqovbzwixdxzpaday`. `sup
 The connected Vercel account has a `ddotter` project. Production deploys should set:
 
 - `SUPABASE_URL`
-- `SUPABASE_SERVICE_KEY`
+- `SUPABASE_SERVICE_KEY`, optional for the current MVP but required for future sync upserts
+- `SUPABASE_ANON_KEY`
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SYNC_SECRET`

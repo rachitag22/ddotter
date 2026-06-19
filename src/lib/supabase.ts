@@ -3,25 +3,31 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 let serverClient: SupabaseClient | null = null;
 
 export function hasSupabaseConfig() {
-  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY);
+  return Boolean(process.env.SUPABASE_URL && getSupabaseServerKey());
+}
+
+function getSupabaseServerKey() {
+  return (
+    process.env.SUPABASE_SERVICE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
 }
 
 export function getSupabaseServerClient() {
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+  const key = getSupabaseServerKey();
+
+  if (!process.env.SUPABASE_URL || !key) {
     throw new Error("Supabase server environment is not configured.");
   }
 
   if (!serverClient) {
-    serverClient = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_KEY,
-      {
-        auth: {
-          persistSession: false,
-          autoRefreshToken: false,
-        },
+    serverClient = createClient(process.env.SUPABASE_URL, key, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
-    );
+    });
   }
 
   return serverClient;
