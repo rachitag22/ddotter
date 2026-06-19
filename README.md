@@ -73,7 +73,7 @@ The first migration has been applied to project ref `kbcnqovbzwixdxzpaday`. `sup
 
 ## Vercel
 
-`vercel.json` defines an hourly cron trigger for `/api/sync`.
+`vercel.json` defines a daily cron trigger for `/api/sync`, which works on Vercel Hobby. Upgrade to Pro or use an external cron trigger for hourly syncs.
 
 The connected Vercel account has a `ddotter` project. Production deploys should set:
 
