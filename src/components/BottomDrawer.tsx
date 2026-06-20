@@ -138,14 +138,24 @@ export function BottomDrawer({
             placeholder="Search projects..."
           />
           <div className="filter-row">
-            <select className="filter-select" defaultValue={filters.type ?? ""} name="type">
+            <select
+              className="filter-select"
+              defaultValue={filters.type ?? ""}
+              name="type"
+              onChange={(e) => (e.target.form as HTMLFormElement).requestSubmit()}
+            >
               <option value="">All types</option>
               <option value="capital_project">Capital</option>
               <option value="bike_lane">Bike lane</option>
               <option value="trail_project">Trail</option>
               <option value="art_installation">Art / memorial</option>
             </select>
-            <select className="filter-select" defaultValue={filters.ward ?? ""} name="ward">
+            <select
+              className="filter-select"
+              defaultValue={filters.ward ?? ""}
+              name="ward"
+              onChange={(e) => (e.target.form as HTMLFormElement).requestSubmit()}
+            >
               <option value="">All wards</option>
               {Array.from({ length: 8 }, (_, i) => `${i + 1}`).map((w) => (
                 <option key={w} value={w}>
@@ -153,7 +163,12 @@ export function BottomDrawer({
                 </option>
               ))}
             </select>
-            <select className="filter-select" defaultValue={filters.status ?? ""} name="status">
+            <select
+              className="filter-select"
+              defaultValue={filters.status ?? ""}
+              name="status"
+              onChange={(e) => (e.target.form as HTMLFormElement).requestSubmit()}
+            >
               <option value="">All statuses</option>
               <option value="active">Active</option>
               <option value="planned">Planned</option>
