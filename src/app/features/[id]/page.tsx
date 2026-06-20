@@ -48,7 +48,7 @@ export default async function FeatureDetail({ params }: PageProps) {
         </div>
         {feature.official_url && (
           <a
-            className="modal-ddot-link"
+            className="drawer-ddot-link"
             href={feature.official_url}
             rel="noopener noreferrer"
             target="_blank"

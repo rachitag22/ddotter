@@ -4,16 +4,21 @@ import { useRouter } from "next/navigation";
 import { MapContainer, TileLayer, CircleMarker, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { sourceTypeColor } from "@/lib/design";
-import type { FeatureRecord } from "@/lib/types";
+import { buildSelectedUrl } from "@/lib/url";
+import type { FeatureFilters, FeatureRecord } from "@/lib/types";
 
 export function MapView({
   features,
+  filters,
   selectedId,
 }: {
   features: FeatureRecord[];
+  filters?: FeatureFilters;
   selectedId?: string;
 }) {
   const router = useRouter();
+
+  const visible = selectedId ? features.filter((f) => f.id === selectedId) : features;
 
   return (
     <MapContainer
@@ -31,10 +36,10 @@ export function MapView({
         updateWhenZooming={false}
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {features.map((feature) => {
+      {visible.map((feature) => {
         const isSelected = feature.id === selectedId;
         const fill = sourceTypeColor[feature.source_type] ?? sourceTypeColor.capital_project;
-        const onClick = () => router.push(`/?selected=${feature.id}`);
+        const onClick = () => router.push(buildSelectedUrl(feature.id, filters));
 
         if (feature.geometry.type === "Point") {
           const [lng, lat] = feature.geometry.coordinates;

@@ -5,7 +5,10 @@ import type { FeatureFilters, FeatureRecord } from "@/lib/types";
 function matchesFilters(feature: FeatureRecord, filters: FeatureFilters) {
   if (filters.type && feature.source_type !== filters.type) return false;
   if (filters.ward && feature.ward !== filters.ward) return false;
-  if (filters.status && feature.status !== filters.status) return false;
+  if (filters.status) {
+    const statuses = filters.status.split(",");
+    if (!statuses.includes(feature.status)) return false;
+  }
 
   if (filters.q) {
     const query = filters.q.toLowerCase();
@@ -43,7 +46,12 @@ export async function getFeatures(filters: FeatureFilters = {}) {
 
     if (filters.type) query = query.eq("source_type", filters.type);
     if (filters.ward) query = query.eq("ward", filters.ward);
-    if (filters.status) query = query.eq("status", filters.status);
+    if (filters.status) {
+      const statuses = filters.status.split(",");
+      query = statuses.length === 1
+        ? query.eq("status", statuses[0])
+        : query.in("status", statuses);
+    }
     if (filters.q) query = query.or(`name.ilike.%${filters.q}%,description.ilike.%${filters.q}%`);
 
     const { data, error } = await query;
