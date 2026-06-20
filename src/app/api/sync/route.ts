@@ -12,8 +12,20 @@ async function syncSource(sourceType: SourceType, getRecords: () => Promise<Feat
     const records = await getRecords();
 
     if (records.length) {
-      const { error } = await supabase.from("features").upsert(records, { onConflict: "id" });
-      if (error) throw error;
+      const { error: upsertError } = await supabase
+        .from("features")
+        .upsert(records, { onConflict: "id" });
+      if (upsertError) throw upsertError;
+
+      // Delete any stale records for this source that are no longer in the
+      // upstream data (e.g. old per-segment bike lane IDs after grouping).
+      const currentIds = records.map((r) => r.id);
+      const { error: deleteError } = await supabase
+        .from("features")
+        .delete()
+        .eq("source_type", sourceType)
+        .not("id", "in", `(${currentIds.map((id) => `"${id}"`).join(",")})`);
+      if (deleteError) throw deleteError;
     }
 
     await supabase.from("sync_log").insert({

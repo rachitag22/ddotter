@@ -320,9 +320,21 @@ export async function fetchBikeLanes() {
       }
     }
 
+    // Collect unique facility types across segments (e.g. "Protected Bike Lane, Bike Lane")
+    const facilities = [
+      ...new Set(
+        bucket
+          .map((f) => asString(f.properties.Facility) ?? asString(f.properties.Asset))
+          .filter((v): v is string => v !== null),
+      ),
+    ];
+
     merged.push({
       geometry: lines.length > 0 ? { type: "MultiLineString", coordinates: lines } : bucket[0].geometry,
-      properties: bucket[0].properties,
+      properties: {
+        ...bucket[0].properties,
+        Facility: facilities.length ? facilities.join(", ") : bucket[0].properties.Facility,
+      },
     });
   }
 
