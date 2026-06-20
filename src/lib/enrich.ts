@@ -35,15 +35,8 @@ export async function extractDescriptionWithLLM(
 ): Promise<string | null> {
   const { text } = await generateText({
     model: anthropic("claude-haiku-4-5-20251001"),
-    prompt: `You are extracting project descriptions for a DC transportation advocacy map.
-
-Project name: "${projectName}"
-
-Page text (may contain nav, footers, etc):
-${pageText}
-
-Write a clear 2-3 sentence description of this project — what it is, where it is, and what it will accomplish. Use plain language. If no project-relevant content exists in the text, respond with exactly: null`,
-    maxTokens: 300,
+    prompt: `You are extracting project descriptions for a DC transportation advocacy map.\n\nProject name: "${projectName}"\n\nPage text (may contain nav, footers, etc):\n${pageText}\n\nWrite a clear 2-3 sentence description of this project — what it is, where it is, and what it will accomplish. Use plain language. If no project-relevant content exists in the text, respond with exactly: null`,
+    maxOutputTokens: 300,
   });
 
   const trimmed = text.trim();
