@@ -115,9 +115,6 @@ function normalizeBikeLane(feature: ArcGisFeature): FeatureRecord | null {
 
   if (!objectId || !name || !feature.geometry) return null;
 
-  // Use a slug of the project name as the stable ID so that all segments
-  // of the same project (which share the same Project field) upsert into
-  // one record after merging. Fall back to objectId for unnamed segments.
   const slug = (project?.trim() || routeName || objectId)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -287,9 +284,6 @@ export async function fetchCapitalProjects() {
 export async function fetchBikeLanes() {
   const features = await fetchArcGisFeatures(BIKE_LANES_URL, { paginate: true });
 
-  // The ArcGIS layer stores one record per physical segment. Group by Project
-  // (falling back to RouteName) so a 3-mile project becomes a single record
-  // with a merged MultiLineString geometry instead of dozens of short stubs.
   const groups = new Map<string, ArcGisFeature[]>();
   for (const feature of features) {
     const raw = feature.properties;
@@ -320,7 +314,6 @@ export async function fetchBikeLanes() {
       }
     }
 
-    // Collect unique facility types across segments (e.g. "Protected Bike Lane, Bike Lane")
     const facilities = [
       ...new Set(
         bucket
@@ -329,11 +322,18 @@ export async function fetchBikeLanes() {
       ),
     ];
 
+    // Store per-segment breakdown so the modal can show "sharrow on blocks X–Y"
+    const segments = bucket.map((f) => ({
+      facility: asString(f.properties.Facility) ?? asString(f.properties.Asset),
+      label: asString(f.properties.Label),
+    }));
+
     merged.push({
       geometry: lines.length > 0 ? { type: "MultiLineString", coordinates: lines } : bucket[0].geometry,
       properties: {
         ...bucket[0].properties,
         Facility: facilities.length ? facilities.join(", ") : bucket[0].properties.Facility,
+        _segments: segments,
       },
     });
   }
