@@ -18,6 +18,7 @@ export const colors = {
 /** Map marker / polyline fill color keyed by source_type. */
 export const sourceTypeColor: Record<string, string> = {
   capital_project:  colors.green,
+  bike_lane:        colors.red,
   trail_project:    colors.blue,
   art_installation: colors.gold,
 };
@@ -25,6 +26,7 @@ export const sourceTypeColor: Record<string, string> = {
 /** Human-readable label keyed by source_type. */
 export const sourceTypeLabel: Record<string, string> = {
   capital_project:  "Capital project",
+  bike_lane:        "Bike lane",
   trail_project:    "Trail project",
-  art_installation: "Art installation",
+  art_installation: "Art / memorial",
 };

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { fetchCapitalProjects } from "@/lib/arcgis";
+import { fetchArtInstallations, fetchBikeLanes, fetchCapitalProjects, fetchTrailProjects } from "@/lib/arcgis";
 import { hasSupabaseConfig } from "@/lib/supabase";
-import { getSupabaseServerClient } from "@/lib/supabase";
+import { getSupabaseSyncClient } from "@/lib/supabase";
 import type { FeatureRecord, SourceType } from "@/lib/types";
 
 async function syncSource(sourceType: SourceType, getRecords: () => Promise<FeatureRecord[]>) {
   const startedAt = new Date().toISOString();
-  const supabase = getSupabaseServerClient();
+  const supabase = getSupabaseSyncClient();
 
   try {
     const records = await getRecords();
@@ -68,26 +68,14 @@ async function handleSync(request: Request) {
   }
 
   const capitalProjects = await syncSource("capital_project", fetchCapitalProjects);
+  const bikeLanes = await syncSource("bike_lane", fetchBikeLanes);
+  const trailProjects = await syncSource("trail_project", fetchTrailProjects);
+  const artInstallations = await syncSource("art_installation", fetchArtInstallations);
+  const sources = [capitalProjects, bikeLanes, trailProjects, artInstallations];
 
   return NextResponse.json({
-    ok: capitalProjects.status === "success",
-    sources: [
-      capitalProjects,
-      {
-        source_type: "trail_project",
-        status: "error",
-        records_seen: 0,
-        records_upserted: 0,
-        error_message: "DDOT/Trails FeatureServer endpoint is not available in the current DCGIS catalog.",
-      },
-      {
-        source_type: "art_installation",
-        status: "error",
-        records_seen: 0,
-        records_upserted: 0,
-        error_message: "Art installation endpoint is still TBD.",
-      },
-    ],
+    ok: sources.every((source) => source.status === "success"),
+    sources,
   });
 }
 
