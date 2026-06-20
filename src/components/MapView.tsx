@@ -54,10 +54,10 @@ export function MapView({
       zoomSnap={0.5}
     >
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         keepBuffer={3}
         updateWhenZooming={false}
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {features.flatMap((feature) => {
         const isSelected = feature.id === selectedId;
@@ -101,7 +101,7 @@ export function MapView({
             <CircleMarker
               center={[lat, lng]}
               eventHandlers={{ click: onClick }}
-              key={feature.id}
+              key={`${feature.id}-${isSelected}`}
               pathOptions={{
                 color: isSelected ? fill : "#fff",
                 fillColor: fill,
