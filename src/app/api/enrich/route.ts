@@ -19,14 +19,19 @@ async function handleEnrich(request: Request) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY is not configured" }, { status: 500 });
   }
 
+  // Read ?source_type= filter; default to both enrichable types
+  const url = new URL(request.url);
+  const sourceTypeParam = url.searchParams.get("source_type");
+  const sourceTypes = sourceTypeParam
+    ? [sourceTypeParam]
+    : ["bike_lane", "capital_project"];
+
   const supabase = getSupabaseSyncClient();
 
-  // Fetch bike_lane records that have an official_url but no description yet
   const { data: records, error } = await supabase
     .from("features")
     .select("id, name, source_type, official_url, description")
-    .eq("source_type", "bike_lane")
-    .not("official_url", "is", null)
+    .in("source_type", sourceTypes)
     .or("description.is.null,description.eq.");
 
   if (error) {

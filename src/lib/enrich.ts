@@ -1,10 +1,6 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 
-/**
- * Fetch a URL and strip it to plain text suitable for an LLM prompt.
- * Returns null on network error or non-200.
- */
 export async function fetchPageText(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
@@ -25,10 +21,6 @@ export async function fetchPageText(url: string): Promise<string | null> {
   }
 }
 
-/**
- * Ask Claude Haiku to pull a clean 2-3 sentence project description from raw
- * page text. Returns null if no relevant content is found.
- */
 export async function extractDescriptionWithLLM(
   pageText: string,
   projectName: string,
@@ -43,37 +35,27 @@ Page text (may contain nav, footers, etc):
 ${pageText}
 
 Write a clear 2-3 sentence description of this project — what it is, where it is, and what it will accomplish. Use plain language. If no project-relevant content exists in the text, respond with exactly: null`,
-    maxTokens: 300,
+    maxOutputTokens: 300,
   });
 
   const trimmed = text.trim();
   return trimmed === "null" || trimmed.toLowerCase().startsWith("null") ? null : trimmed;
 }
 
-/**
- * Sources + approach for each type:
- *
- * bike_lane   — official_url from DDOT BikeLane FeatureServer → bikelanes.ddot.dc.gov/pages/[slug]
- *               These pages have rich prose descriptions. Scrape + LLM extract. ✓ implemented below.
- *
- * capital_project — raw.Description in PTP is often empty/project-name only.
- *               DDOT's project portal (ddot.dc.gov/page/ddot-capital-projects) has individual
- *               project pages but no machine-readable index. Best approach: search-and-scrape
- *               using `name` as a query against ddot.dc.gov search, then LLM extract.
- *               Alternative: OpenData DC "Capital Projects" has a `DESCRIPTION` field that's
- *               sometimes richer than the GIS layer — worth joining on ProjectID.
- *
- * trail_project — Existing trails are infrastructure records; DDOT/NCRPA trail pages exist but
- *               are inconsistently structured. Best sources: TrailLink.com has DC trail data with
- *               descriptions, or the DC Trail Finder (trailsfordc.org). LLM extraction from
- *               trail-finder pages is the most reliable path.
- *
- * art_installation — Currently using DCGIS Memorials layer (wrong source). The DC Office of
- *               Planning has a public art inventory at opendata.dc.gov (dataset: "Public Art").
- *               That dataset has `DESCRIPTION` fields. Switch the source entirely rather than
- *               scraping — fetch from:
- *               https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Cultural_and_Society_WebMercator/MapServer/18/query
- */
+// Search DDOT's website for a capital project by name, return the first result URL.
+async function findDdotProjectUrl(projectName: string): Promise<string | null> {
+  const query = encodeURIComponent(projectName);
+  const searchUrl = `https://ddot.dc.gov/search?search_api_fulltext=${query}&type=project_page`;
+  const pageText = await fetchPageText(searchUrl);
+  if (!pageText) return null;
+
+  // Look for a project page path in the stripped text — DDOT project pages follow /node/<id>
+  // or /page/<slug> patterns. Extract the first href that looks like a project page.
+  const match = pageText.match(/\/page\/[a-z0-9-]{4,}|\/node\/\d+/);
+  if (!match) return null;
+
+  return `https://ddot.dc.gov${match[0]}`;
+}
 
 export type EnrichResult = {
   id: string;
@@ -89,19 +71,40 @@ export async function enrichRecord(record: {
   official_url: string | null;
   description: string | null;
 }): Promise<EnrichResult> {
-  // For now: bike_lane only (has official_url)
-  if (record.source_type !== "bike_lane" || !record.official_url) {
-    return { id: record.id, updated: false, description: record.description };
-  }
-
   try {
-    const pageText = await fetchPageText(record.official_url);
-    if (!pageText) {
-      return { id: record.id, updated: false, description: null, error: "fetch_failed" };
+    if (record.source_type === "bike_lane") {
+      if (!record.official_url) {
+        return { id: record.id, updated: false, description: record.description };
+      }
+      const pageText = await fetchPageText(record.official_url);
+      if (!pageText) {
+        return { id: record.id, updated: false, description: null, error: "fetch_failed" };
+      }
+      const description = await extractDescriptionWithLLM(pageText, record.name);
+      return { id: record.id, updated: description !== null, description };
     }
 
-    const description = await extractDescriptionWithLLM(pageText, record.name);
-    return { id: record.id, updated: description !== null, description };
+    if (record.source_type === "capital_project") {
+      // If the sync already captured a non-trivial description, leave it.
+      if (record.description && record.description.length > 60 && record.description !== record.name) {
+        return { id: record.id, updated: false, description: record.description };
+      }
+
+      // Try official_url first; fall back to DDOT search.
+      const url = record.official_url ?? (await findDdotProjectUrl(record.name));
+      if (!url) {
+        return { id: record.id, updated: false, description: null, error: "no_url_found" };
+      }
+
+      const pageText = await fetchPageText(url);
+      if (!pageText) {
+        return { id: record.id, updated: false, description: null, error: "fetch_failed" };
+      }
+      const description = await extractDescriptionWithLLM(pageText, record.name);
+      return { id: record.id, updated: description !== null, description };
+    }
+
+    return { id: record.id, updated: false, description: record.description };
   } catch (err) {
     return {
       id: record.id,
