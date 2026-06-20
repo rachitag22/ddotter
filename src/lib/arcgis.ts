@@ -115,8 +115,16 @@ function normalizeBikeLane(feature: ArcGisFeature): FeatureRecord | null {
 
   if (!objectId || !name || !feature.geometry) return null;
 
+  // Use a slug of the project name as the stable ID so that all segments
+  // of the same project (which share the same Project field) upsert into
+  // one record after merging. Fall back to objectId for unnamed segments.
+  const slug = (project?.trim() || routeName || objectId)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
   return {
-    id: `bike-lane-${objectId}`,
+    id: `bike-lane-${slug}`,
     source_type: "bike_lane",
     source_id: objectId,
     name,
@@ -273,7 +281,47 @@ export async function fetchCapitalProjects() {
 
 export async function fetchBikeLanes() {
   const features = await fetchArcGisFeatures(BIKE_LANES_URL, { paginate: true });
-  return features.map(normalizeBikeLane).filter((feature): feature is FeatureRecord => Boolean(feature));
+
+  // The ArcGIS layer stores one record per physical segment. Group by Project
+  // (falling back to RouteName) so a 3-mile project becomes a single record
+  // with a merged MultiLineString geometry instead of dozens of short stubs.
+  const groups = new Map<string, ArcGisFeature[]>();
+  for (const feature of features) {
+    const raw = feature.properties;
+    const key =
+      asString(raw.Project)?.trim() ||
+      asString(raw.RouteName)?.trim() ||
+      asString(raw.ObjectID) ||
+      "unknown";
+    const bucket = groups.get(key) ?? [];
+    bucket.push(feature);
+    groups.set(key, bucket);
+  }
+
+  const merged: ArcGisFeature[] = [];
+  for (const [, bucket] of groups) {
+    if (bucket.length === 1) {
+      merged.push(bucket[0]);
+      continue;
+    }
+
+    const lines: [number, number][][] = [];
+    for (const f of bucket) {
+      if (!f.geometry) continue;
+      if (f.geometry.type === "LineString") {
+        lines.push(f.geometry.coordinates as [number, number][]);
+      } else if (f.geometry.type === "MultiLineString") {
+        lines.push(...(f.geometry.coordinates as [number, number][][]));
+      }
+    }
+
+    merged.push({
+      geometry: lines.length > 0 ? { type: "MultiLineString", coordinates: lines } : bucket[0].geometry,
+      properties: bucket[0].properties,
+    });
+  }
+
+  return merged.map(normalizeBikeLane).filter((feature): feature is FeatureRecord => Boolean(feature));
 }
 
 export async function fetchTrailProjects() {

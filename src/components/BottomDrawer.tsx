@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { sourceTypeLabel } from "@/lib/design";
+import { buildSelectedUrl } from "@/lib/url";
 import type { FeatureRecord, FeatureFilters } from "@/lib/types";
 
 type DrawerState = "peek" | "half" | "full";
@@ -30,9 +31,11 @@ function cycleState(s: DrawerState): DrawerState {
 export function BottomDrawer({
   features,
   filters,
+  selectedId,
 }: {
   features: FeatureRecord[];
   filters: FeatureFilters;
+  selectedId?: string;
 }) {
   const [snapState, setSnapState] = useState<DrawerState>("peek");
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -135,14 +138,24 @@ export function BottomDrawer({
             placeholder="Search projects..."
           />
           <div className="filter-row">
-            <select className="filter-select" defaultValue={filters.type ?? ""} name="type">
+            <select
+              className="filter-select"
+              defaultValue={filters.type ?? ""}
+              name="type"
+              onChange={(e) => (e.target.form as HTMLFormElement).requestSubmit()}
+            >
               <option value="">All types</option>
               <option value="capital_project">Capital</option>
               <option value="bike_lane">Bike lane</option>
               <option value="trail_project">Trail</option>
               <option value="art_installation">Art / memorial</option>
             </select>
-            <select className="filter-select" defaultValue={filters.ward ?? ""} name="ward">
+            <select
+              className="filter-select"
+              defaultValue={filters.ward ?? ""}
+              name="ward"
+              onChange={(e) => (e.target.form as HTMLFormElement).requestSubmit()}
+            >
               <option value="">All wards</option>
               {Array.from({ length: 8 }, (_, i) => `${i + 1}`).map((w) => (
                 <option key={w} value={w}>
@@ -150,22 +163,27 @@ export function BottomDrawer({
                 </option>
               ))}
             </select>
-            <select className="filter-select" defaultValue={filters.status ?? ""} name="status">
+            <select
+              className="filter-select"
+              defaultValue={filters.status ?? ""}
+              name="status"
+              onChange={(e) => (e.target.form as HTMLFormElement).requestSubmit()}
+            >
               <option value="">All statuses</option>
               <option value="active">Active</option>
               <option value="planned">Planned</option>
               <option value="complete">Complete</option>
               <option value="unknown">Unknown</option>
             </select>
-            <button className="filter-apply" type="submit">
-              Apply
-            </button>
           </div>
         </form>
 
         <div className="project-list">
           {features.map((feature) => (
-            <article className="project-card" key={feature.id}>
+            <article
+              className={`project-card${selectedId === feature.id ? " selected" : ""}`}
+              key={feature.id}
+            >
               <div className="meta">
                 <span className={`badge ${feature.status}`}>{feature.status}</span>
                 <span className="badge">Ward {feature.ward ?? "?"}</span>
@@ -179,7 +197,7 @@ export function BottomDrawer({
                 {feature.feedback_count ?? 0} responses
                 {feature.support_percent ? `, ${feature.support_percent}% support` : ""}
               </p>
-              <Link className="link-button" href={`/features/${feature.id}`}>
+              <Link className="link-button" href={buildSelectedUrl(feature.id, filters)}>
                 View project →
               </Link>
             </article>
