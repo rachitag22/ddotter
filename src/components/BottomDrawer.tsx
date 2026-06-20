@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { sourceTypeLabel } from "@/lib/design";
+import { buildSelectedUrl } from "@/lib/url";
 import type { FeatureRecord, FeatureFilters } from "@/lib/types";
 
 type DrawerState = "peek" | "half" | "full";
@@ -30,9 +31,11 @@ function cycleState(s: DrawerState): DrawerState {
 export function BottomDrawer({
   features,
   filters,
+  selectedId,
 }: {
   features: FeatureRecord[];
   filters: FeatureFilters;
+  selectedId?: string;
 }) {
   const [snapState, setSnapState] = useState<DrawerState>("peek");
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -165,7 +168,10 @@ export function BottomDrawer({
 
         <div className="project-list">
           {features.map((feature) => (
-            <article className="project-card" key={feature.id}>
+            <article
+              className={`project-card${selectedId === feature.id ? " selected" : ""}`}
+              key={feature.id}
+            >
               <div className="meta">
                 <span className={`badge ${feature.status}`}>{feature.status}</span>
                 <span className="badge">Ward {feature.ward ?? "?"}</span>
@@ -179,7 +185,7 @@ export function BottomDrawer({
                 {feature.feedback_count ?? 0} responses
                 {feature.support_percent ? `, ${feature.support_percent}% support` : ""}
               </p>
-              <Link className="link-button" href={`/features/${feature.id}`}>
+              <Link className="link-button" href={buildSelectedUrl(feature.id, filters)}>
                 View project →
               </Link>
             </article>
