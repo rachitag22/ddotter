@@ -4,8 +4,7 @@ import { useRouter } from "next/navigation";
 import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { sourceTypeColor } from "@/lib/design";
-import { buildSelectedUrl } from "@/lib/url";
-import type { FeatureFilters, FeatureRecord } from "@/lib/types";
+import type { FeatureRecord } from "@/lib/types";
 
 type RawSeg = { facility: string | null; label: string | null; coordinates?: [number, number][] };
 
@@ -37,11 +36,9 @@ function getSegments(raw: Record<string, unknown>): RawSeg[] | null {
 
 export function MapView({
   features,
-  filters,
   selectedId,
 }: {
   features: FeatureRecord[];
-  filters?: FeatureFilters;
   selectedId?: string;
 }) {
   const router = useRouter();
@@ -65,7 +62,7 @@ export function MapView({
       {features.flatMap((feature) => {
         const isSelected = feature.id === selectedId;
         const fill = sourceTypeColor[feature.source_type] ?? sourceTypeColor.capital_project;
-        const onClick = () => router.push(buildSelectedUrl(feature.id, filters));
+        const onClick = () => router.push(`/?selected=${feature.id}`);
 
         // Bike lanes: render each segment with its own facility color + label
         if (feature.source_type === "bike_lane") {
@@ -83,9 +80,11 @@ export function MapView({
                   pathOptions={{ color, opacity: isSelected ? 1 : 0.82, weight: isSelected ? 8 : 5 }}
                   positions={positions}
                 >
-                  <Tooltip className="seg-tooltip" direction="auto" permanent>
-                    {facilityAbbrev(seg.facility)}
-                  </Tooltip>
+                  {isSelected && (
+                    <Tooltip className="seg-tooltip" direction="auto" permanent>
+                      {facilityAbbrev(seg.facility)}
+                    </Tooltip>
+                  )}
                 </Polyline>,
               ];
             });
