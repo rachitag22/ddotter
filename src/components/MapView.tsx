@@ -80,9 +80,11 @@ export function MapView({
                   pathOptions={{ color, opacity: isSelected ? 1 : 0.82, weight: isSelected ? 8 : 5 }}
                   positions={positions}
                 >
-                  <Tooltip className="seg-tooltip" direction="auto" permanent>
-                    {facilityAbbrev(seg.facility)}
-                  </Tooltip>
+                  {isSelected && (
+                    <Tooltip className="seg-tooltip" direction="auto" permanent>
+                      {facilityAbbrev(seg.facility)}
+                    </Tooltip>
+                  )}
                 </Polyline>,
               ];
             });
