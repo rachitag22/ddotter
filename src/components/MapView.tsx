@@ -82,23 +82,6 @@ export function MapView({
           );
         }
 
-        if (feature.geometry.type === "MultiLineString") {
-          const positions = feature.geometry.coordinates.map((line) =>
-            line.map(([lng, lat]) => [lat, lng] as [number, number]),
-          );
-          return (
-            <Polyline
-              key={feature.id}
-              pathOptions={{ color, opacity: 0.85, weight: 5 }}
-              positions={positions}
-            >
-              <Popup autoPan={false} maxWidth={220} minWidth={180}>
-                <FeaturePopup feature={feature} />
-              </Popup>
-            </Polyline>
-          );
-        }
-
         return null;
       })}
     </MapContainer>
