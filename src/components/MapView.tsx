@@ -1,27 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { MapContainer, TileLayer, CircleMarker, Polyline, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Polyline } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { sourceTypeColor, sourceTypeLabel } from "@/lib/design";
+import { sourceTypeColor } from "@/lib/design";
 import type { FeatureRecord } from "@/lib/types";
-
-function FeaturePopup({ feature }: { feature: FeatureRecord }) {
-  return (
-    <div className="map-popup">
-      <p className="map-popup-name">{feature.name}</p>
-      <div className="map-popup-meta">
-        <span className={`badge ${feature.status}`}>{feature.status}</span>
-        <span className="badge">
-          {feature.mode ?? sourceTypeLabel[feature.source_type] ?? feature.source_type}
-        </span>
-      </div>
-      <a className="map-popup-link" href={`/?selected=${feature.id}`}>
-        View project →
-      </a>
-    </div>
-  );
-}
 
 export function MapView({
   features,
@@ -50,29 +33,24 @@ export function MapView({
       />
       {features.map((feature) => {
         const isSelected = feature.id === selectedId;
-        const baseColor = sourceTypeColor[feature.source_type] ?? sourceTypeColor.capital_project;
-        const color = isSelected ? "#ffffff" : baseColor;
-        const fillColor = baseColor;
+        const fill = sourceTypeColor[feature.source_type] ?? sourceTypeColor.capital_project;
+        const onClick = () => router.push(`/?selected=${feature.id}`);
 
         if (feature.geometry.type === "Point") {
           const [lng, lat] = feature.geometry.coordinates;
           return (
             <CircleMarker
               center={[lat, lng]}
-              eventHandlers={{ click: () => router.push(`/?selected=${feature.id}`) }}
+              eventHandlers={{ click: onClick }}
               key={feature.id}
               pathOptions={{
-                color: isSelected ? baseColor : "#fff",
-                fillColor,
+                color: isSelected ? fill : "#fff",
+                fillColor: fill,
                 fillOpacity: 0.9,
                 weight: isSelected ? 4 : 2,
               }}
-              radius={isSelected ? 12 : 9}
-            >
-              <Popup autoPan={false} maxWidth={220} minWidth={180}>
-                <FeaturePopup feature={feature} />
-              </Popup>
-            </CircleMarker>
+              radius={isSelected ? 13 : 9}
+            />
           );
         }
 
@@ -82,15 +60,11 @@ export function MapView({
           );
           return (
             <Polyline
-              eventHandlers={{ click: () => router.push(`/?selected=${feature.id}`) }}
+              eventHandlers={{ click: onClick }}
               key={feature.id}
-              pathOptions={{ color: fillColor, opacity: isSelected ? 1 : 0.85, weight: isSelected ? 8 : 5 }}
+              pathOptions={{ color: fill, opacity: isSelected ? 1 : 0.75, weight: isSelected ? 9 : 5 }}
               positions={positions}
-            >
-              <Popup autoPan={false} maxWidth={220} minWidth={180}>
-                <FeaturePopup feature={feature} />
-              </Popup>
-            </Polyline>
+            />
           );
         }
 
@@ -100,15 +74,11 @@ export function MapView({
           );
           return (
             <Polyline
-              eventHandlers={{ click: () => router.push(`/?selected=${feature.id}`) }}
+              eventHandlers={{ click: onClick }}
               key={feature.id}
-              pathOptions={{ color: fillColor, opacity: isSelected ? 1 : 0.85, weight: isSelected ? 8 : 5 }}
+              pathOptions={{ color: fill, opacity: isSelected ? 1 : 0.75, weight: isSelected ? 9 : 5 }}
               positions={positions}
-            >
-              <Popup autoPan={false} maxWidth={220} minWidth={180}>
-                <FeaturePopup feature={feature} />
-              </Popup>
-            </Polyline>
+            />
           );
         }
 
