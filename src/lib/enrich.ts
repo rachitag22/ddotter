@@ -50,31 +50,6 @@ Write a clear 2-3 sentence description of this project — what it is, where it 
   return trimmed === "null" || trimmed.toLowerCase().startsWith("null") ? null : trimmed;
 }
 
-/**
- * Sources + approach for each type:
- *
- * bike_lane   — official_url from DDOT BikeLane FeatureServer → bikelanes.ddot.dc.gov/pages/[slug]
- *               These pages have rich prose descriptions. Scrape + LLM extract. ✓ implemented below.
- *
- * capital_project — raw.Description in PTP is often empty/project-name only.
- *               DDOT's project portal (ddot.dc.gov/page/ddot-capital-projects) has individual
- *               project pages but no machine-readable index. Best approach: search-and-scrape
- *               using `name` as a query against ddot.dc.gov search, then LLM extract.
- *               Alternative: OpenData DC "Capital Projects" has a `DESCRIPTION` field that's
- *               sometimes richer than the GIS layer — worth joining on ProjectID.
- *
- * trail_project — Existing trails are infrastructure records; DDOT/NCRPA trail pages exist but
- *               are inconsistently structured. Best sources: TrailLink.com has DC trail data with
- *               descriptions, or the DC Trail Finder (trailsfordc.org). LLM extraction from
- *               trail-finder pages is the most reliable path.
- *
- * art_installation — Currently using DCGIS Memorials layer (wrong source). The DC Office of
- *               Planning has a public art inventory at opendata.dc.gov (dataset: "Public Art").
- *               That dataset has `DESCRIPTION` fields. Switch the source entirely rather than
- *               scraping — fetch from:
- *               https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Cultural_and_Society_WebMercator/MapServer/18/query
- */
-
 export type EnrichResult = {
   id: string;
   updated: boolean;
@@ -82,26 +57,115 @@ export type EnrichResult = {
   error?: string;
 };
 
-export async function enrichRecord(record: {
+export type EnrichableRecord = {
   id: string;
   name: string;
   source_type: string;
   official_url: string | null;
   description: string | null;
-}): Promise<EnrichResult> {
-  // For now: bike_lane only (has official_url)
-  if (record.source_type !== "bike_lane" || !record.official_url) {
-    return { id: record.id, updated: false, description: record.description };
-  }
+  ward?: string | null;
+  mode?: string | null;
+  status?: string | null;
+  timeline_start?: string | null;
+  timeline_end?: string | null;
+  cost?: number | null;
+  raw?: Record<string, unknown>;
+};
 
+/**
+ * Synthesize a plain-language description from structured fields using the LLM.
+ * Used when no external page is available to scrape.
+ */
+async function synthesizeDescription(
+  record: EnrichableRecord,
+  contextLines: string[],
+): Promise<string | null> {
+  const context = contextLines.filter(Boolean).join("\n");
+
+  const { text } = await generateText({
+    model: anthropic("claude-haiku-4-5-20251001"),
+    prompt: `You are writing plain-language project descriptions for a DC transportation advocacy map.
+
+Project name: "${record.name}"
+Known details:
+${context}
+
+Write a clear 2-3 sentence description of this project — what it is, where it is in DC, and what it will accomplish or provides. Use plain language for a general audience. Do not invent details not present above. If there is genuinely not enough information to write a meaningful description, respond with exactly: null`,
+    maxOutputTokens: 300,
+  });
+
+  const trimmed = text.trim();
+  return trimmed === "null" || trimmed.toLowerCase().startsWith("null") ? null : trimmed;
+}
+
+function asStr(v: unknown): string | null {
+  if (v === null || v === undefined || v === "") return null;
+  return String(v);
+}
+
+export async function enrichRecord(record: EnrichableRecord): Promise<EnrichResult> {
   try {
-    const pageText = await fetchPageText(record.official_url);
-    if (!pageText) {
-      return { id: record.id, updated: false, description: null, error: "fetch_failed" };
+    if (record.source_type === "bike_lane") {
+      if (!record.official_url) {
+        return { id: record.id, updated: false, description: record.description };
+      }
+      const pageText = await fetchPageText(record.official_url);
+      if (!pageText) {
+        return { id: record.id, updated: false, description: null, error: "fetch_failed" };
+      }
+      const description = await extractDescriptionWithLLM(pageText, record.name);
+      return { id: record.id, updated: description !== null, description };
     }
 
-    const description = await extractDescriptionWithLLM(pageText, record.name);
-    return { id: record.id, updated: description !== null, description };
+    if (record.source_type === "capital_project") {
+      const raw = record.raw ?? {};
+      const contextLines = [
+        record.ward ? `Ward: ${record.ward}` : null,
+        record.mode ? `Work type: ${record.mode}` : null,
+        record.status ? `Status: ${record.status}` : null,
+        asStr(raw.ANC) ? `ANC: ${asStr(raw.ANC)}` : null,
+        asStr(raw.IntersectionName) ? `Location: ${asStr(raw.IntersectionName)}` : null,
+        asStr(raw.RouteName) ? `Route: ${asStr(raw.RouteName)}` : null,
+        record.timeline_start ? `Estimated start: ${record.timeline_start}` : null,
+        record.timeline_end ? `Estimated completion: ${record.timeline_end}` : null,
+        record.cost ? `Estimated cost: $${record.cost.toLocaleString()}` : null,
+        asStr(raw.Description) && asStr(raw.Description) !== record.name
+          ? `Source note: ${asStr(raw.Description)}`
+          : null,
+      ].filter((s): s is string => s !== null);
+
+      const description = await synthesizeDescription(record, contextLines);
+      return { id: record.id, updated: description !== null, description };
+    }
+
+    if (record.source_type === "trail_project") {
+      const raw = record.raw ?? {};
+      const isPlanned = record.id.startsWith("trail-planned-");
+      const contextLines = [
+        record.ward ? `Ward(s): ${record.ward}` : null,
+        record.status ? `Status: ${record.status}` : null,
+        isPlanned
+          ? [
+              asStr(raw.USE_TYPE) ? `Use type: ${asStr(raw.USE_TYPE)}` : null,
+              raw.LENGTH ? `Length: ${Math.round(Number(raw.LENGTH)).toLocaleString()} ft` : null,
+              asStr(raw.TRAIL_SEGMENT) ? `Segment: ${asStr(raw.TRAIL_SEGMENT)}` : null,
+            ]
+          : [
+              asStr(raw.TRAIL_CLASS) ? `Trail class: ${asStr(raw.TRAIL_CLASS)}` : null,
+              asStr(raw.SURFACE_TYPE) ? `Surface: ${asStr(raw.SURFACE_TYPE)}` : null,
+              asStr(raw.MAINTENANCE) ? `Maintained by: ${asStr(raw.MAINTENANCE)}` : null,
+              asStr(raw.TRAIL_SEGMENT) ? `Segment: ${asStr(raw.TRAIL_SEGMENT)}` : null,
+              raw.YEAR_CONSTRUCTED ? `Year constructed: ${raw.YEAR_CONSTRUCTED}` : null,
+            ],
+      ]
+        .flat()
+        .filter((s): s is string => s !== null);
+
+      const description = await synthesizeDescription(record, contextLines);
+      return { id: record.id, updated: description !== null, description };
+    }
+
+    return { id: record.id, updated: false, description: record.description };
   } catch (err) {
     return {
       id: record.id,

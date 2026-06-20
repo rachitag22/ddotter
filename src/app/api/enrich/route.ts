@@ -19,24 +19,38 @@ async function handleEnrich(request: Request) {
     return NextResponse.json({ error: "ANTHROPIC_API_KEY is not configured" }, { status: 500 });
   }
 
+  const url = new URL(request.url);
+  const sourceTypeFilter = url.searchParams.get("source_type");
+
+  const ENRICHABLE_TYPES = ["bike_lane", "capital_project", "trail_project"];
+  const targetTypes = sourceTypeFilter
+    ? ENRICHABLE_TYPES.filter((t) => t === sourceTypeFilter)
+    : ENRICHABLE_TYPES;
+
+  if (targetTypes.length === 0) {
+    return NextResponse.json({ error: `Unknown source_type: ${sourceTypeFilter}` }, { status: 400 });
+  }
+
   const supabase = getSupabaseSyncClient();
 
-  // Fetch bike_lane records that have an official_url but no description yet
   const { data: records, error } = await supabase
     .from("features")
-    .select("id, name, source_type, official_url, description")
-    .eq("source_type", "bike_lane")
-    .not("official_url", "is", null)
-    .or("description.is.null,description.eq.");
+    .select("id, name, source_type, official_url, description, ward, mode, status, timeline_start, timeline_end, cost, raw")
+    .in("source_type", targetTypes)
+    .or("description.is.null,description.eq.")
+    .order("source_type");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const allRecords = records ?? [];
+  const byType: Record<string, number> = {};
   const results = [];
   let updated = 0;
 
-  for (const record of records ?? []) {
+  for (const record of allRecords) {
+    byType[record.source_type] = (byType[record.source_type] ?? 0) + 1;
     const result = await enrichRecord(record);
     results.push(result);
 
@@ -51,7 +65,8 @@ async function handleEnrich(request: Request) {
 
   return NextResponse.json({
     ok: true,
-    records_seen: records?.length ?? 0,
+    records_seen: allRecords.length,
+    records_seen_by_type: byType,
     records_updated: updated,
     results,
   });
