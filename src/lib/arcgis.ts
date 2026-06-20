@@ -25,8 +25,8 @@ const EXISTING_BIKE_TRAILS_URL =
   "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Transportation_Bikes_Trails_WebMercator/MapServer/4/query";
 const PLANNED_MULTI_USE_TRAILS_URL =
   "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Transportation_Bikes_Trails_WebMercator/MapServer/1/query";
-const PUBLIC_ART_URL =
-  "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Cultural_and_Society_WebMercator/MapServer/18/query";
+const MEMORIALS_URL =
+  "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Cultural_and_Society_WebMercator/MapServer/55/query";
 
 function asString(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
@@ -115,10 +115,7 @@ function normalizeBikeLane(feature: ArcGisFeature): FeatureRecord | null {
 
   if (!objectId || !name || !feature.geometry) return null;
 
-  const slug = (project?.trim() || routeName || objectId)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+  const slug = bikeLaneSlug(project?.trim() || routeName || objectId);
 
   return {
     id: `bike-lane-${slug}`,
@@ -137,6 +134,13 @@ function normalizeBikeLane(feature: ArcGisFeature): FeatureRecord | null {
     raw,
     synced_at: new Date().toISOString(),
   };
+}
+
+function bikeLaneSlug(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 function normalizeExistingTrail(feature: ArcGisFeature): FeatureRecord | null {
@@ -202,37 +206,32 @@ function normalizePlannedTrail(feature: ArcGisFeature): FeatureRecord | null {
   };
 }
 
-function normalizePublicArt(feature: ArcGisFeature): FeatureRecord | null {
+function normalizeMemorial(feature: ArcGisFeature): FeatureRecord | null {
   const raw = feature.properties;
-  const objectId = asString(raw.OBJECTID);
-  const name = asString(raw.TITLE) ?? asString(raw.ARTWORKNAME);
+  const objectId = asString(pick(raw, "DCGIS.PLACE_NAMES_PT.OBJECTID", "OBJECTID"));
+  const name = asString(pick(raw, "DCGIS.PLACE_NAMES_PT.NAME", "NAME"));
 
   if (!objectId || !name || !feature.geometry) return null;
-
-  const artist = asString(raw.ARTIST);
-  const medium = asString(raw.MEDIUM) ?? asString(raw.ARTWORKTYPE);
-  const location = asString(raw.LOCATION) ?? asString(raw.SUBLOCALITY);
-  const descParts = [
-    artist ? `By ${artist}.` : null,
-    medium,
-    location ? `Located at ${location}.` : null,
-  ].filter(Boolean);
 
   return {
     id: `art-installation-${objectId}`,
     source_type: "art_installation",
     source_id: objectId,
     name,
-    status: "complete",
-    ward: asString(raw.WARD),
-    mode: medium ?? "Public art",
-    description: descParts.length ? descParts.join(" ") : asString(raw.DESCRIPTION),
-    timeline_start: raw.YEARINSTALLED ? `${asString(raw.YEARINSTALLED)}-01-01` : asDate(raw.CREATED_DATE),
+    status: normalizeStatus(pick(raw, "DCGIS.PLACE_NAMES_PT.STATUS", "STATUS")),
+    ward: asString(pick(raw, "DCGIS.ADDRESSES_PT.WARD", "WARD")),
+    mode: asString(pick(raw, "MAR.VW_PLACE_NAME_CATEGORIES.CATEGORY", "CATEGORY")) ?? "Memorial",
+    description: asString(pick(raw, "DCGIS.ADDRESSES_PT.ADDRESS", "ADDRESS")),
+    timeline_start: asDate(pick(raw, "DCGIS.PLACE_NAMES_PT.BEGIN_DATE", "BEGIN_DATE")),
     timeline_end: null,
     cost: null,
-    official_url: asString(raw.URL),
+    official_url: null,
     geometry: feature.geometry,
-    raw,
+    raw: {
+      ...raw,
+      source_note:
+        "DCGIS Memorials layer, used as the initial art/cultural installation feed until a dedicated public art installation dataset is identified.",
+    },
     synced_at: new Date().toISOString(),
   };
 }
@@ -287,11 +286,12 @@ export async function fetchBikeLanes() {
   const groups = new Map<string, ArcGisFeature[]>();
   for (const feature of features) {
     const raw = feature.properties;
-    const key =
+    const rawKey =
       asString(raw.Project)?.trim() ||
       asString(raw.RouteName)?.trim() ||
       asString(raw.ObjectID) ||
       "unknown";
+    const key = bikeLaneSlug(rawKey);
     const bucket = groups.get(key) ?? [];
     bucket.push(feature);
     groups.set(key, bucket);
@@ -360,8 +360,8 @@ export async function fetchTrailProjects() {
 }
 
 export async function fetchArtInstallations() {
-  const features = await fetchArcGisFeatures(PUBLIC_ART_URL, { paginate: true });
-  return features.map(normalizePublicArt).filter((feature): feature is FeatureRecord => Boolean(feature));
+  const features = await fetchArcGisFeatures(MEMORIALS_URL, { paginate: false });
+  return features.map(normalizeMemorial).filter((feature): feature is FeatureRecord => Boolean(feature));
 }
 
 export async function fetchAllArcGisFeatures() {

@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import type { FeatureFilters, FeatureRecord } from "@/lib/types";
 
-const MapView = dynamic(
+const MapView = dynamic<{ features: FeatureRecord[]; filters?: FeatureFilters; selectedId?: string }>(
   () => import("@/components/MapView").then((m) => ({ default: m.MapView })),
   { loading: () => <div className="map-loading" />, ssr: false },
 );
