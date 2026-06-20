@@ -73,6 +73,10 @@ export function MapView({
               if (!coords?.length) return [];
               const positions = coords.map(([lng, lat]) => [lat, lng] as [number, number]);
               const color = facilityColor(seg.facility);
+              const abbrev = facilityAbbrev(seg.facility);
+              const segLabel = seg.label && seg.label !== feature.name ? seg.label : null;
+              const tooltipText = segLabel ? `${abbrev} · ${segLabel}` : abbrev;
+
               return [
                 <Polyline
                   key={`${feature.id}-${i}`}
@@ -82,7 +86,7 @@ export function MapView({
                 >
                   {isSelected && (
                     <Tooltip className="seg-tooltip" direction="auto" permanent>
-                      {facilityAbbrev(seg.facility)}
+                      {tooltipText}
                     </Tooltip>
                   )}
                 </Polyline>,
