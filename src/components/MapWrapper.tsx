@@ -8,6 +8,6 @@ const MapView = dynamic(
   { loading: () => <div className="map-loading" />, ssr: false },
 );
 
-export function MapWrapper({ features }: { features: FeatureRecord[] }) {
-  return <MapView features={features} />;
+export function MapWrapper({ features, selectedId }: { features: FeatureRecord[]; selectedId?: string }) {
+  return <MapView features={features} selectedId={selectedId} />;
 }

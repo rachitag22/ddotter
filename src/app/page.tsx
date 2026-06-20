@@ -1,6 +1,7 @@
-import { getFeatures } from "@/lib/features";
+import { getFeature, getFeatures } from "@/lib/features";
 import { MapWrapper } from "@/components/MapWrapper";
 import { BottomDrawer } from "@/components/BottomDrawer";
+import { FeatureModal } from "@/components/FeatureModal";
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -18,12 +19,18 @@ export default async function Home({ searchParams }: PageProps) {
     status: first(params.status),
     q: first(params.q),
   };
-  const features = await getFeatures(filters);
+  const selected = first(params.selected);
+
+  const [features, selectedFeature] = await Promise.all([
+    getFeatures(filters),
+    selected ? getFeature(selected) : Promise.resolve(null),
+  ]);
 
   return (
     <div className="app">
-      <MapWrapper features={features} />
-      <BottomDrawer features={features} filters={filters} />
+      <MapWrapper features={features} selectedId={selected} />
+      <BottomDrawer features={features} filters={filters} selectedId={selected} />
+      {selectedFeature && <FeatureModal feature={selectedFeature} filters={filters} />}
     </div>
   );
 }
