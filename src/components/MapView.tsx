@@ -101,7 +101,7 @@ export function MapView({
             <CircleMarker
               center={[lat, lng]}
               eventHandlers={{ click: onClick }}
-              key={feature.id}
+              key={`${feature.id}-${isSelected}`}
               pathOptions={{
                 color: isSelected ? fill : "#fff",
                 fillColor: fill,
