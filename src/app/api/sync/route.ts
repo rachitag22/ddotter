@@ -4,17 +4,6 @@ import { hasSupabaseConfig } from "@/lib/supabase";
 import { getSupabaseSyncClient } from "@/lib/supabase";
 import type { FeatureRecord, SourceType } from "@/lib/types";
 
-function errorMessage(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (error && typeof error === "object") {
-    const values = Object.values(error as Record<string, unknown>)
-      .filter((value) => typeof value === "string")
-      .join(": ");
-    return values || JSON.stringify(error);
-  }
-  return "Unknown sync error";
-}
-
 async function syncSource(sourceType: SourceType, getRecords: () => Promise<FeatureRecord[]>) {
   const startedAt = new Date().toISOString();
   const supabase = getSupabaseSyncClient();
@@ -23,8 +12,20 @@ async function syncSource(sourceType: SourceType, getRecords: () => Promise<Feat
     const records = await getRecords();
 
     if (records.length) {
-      const { error } = await supabase.from("features").upsert(records, { onConflict: "id" });
-      if (error) throw error;
+      const { error: upsertError } = await supabase
+        .from("features")
+        .upsert(records, { onConflict: "id" });
+      if (upsertError) throw upsertError;
+
+      // Delete any stale records for this source that are no longer in the
+      // upstream data (e.g. old per-segment bike lane IDs after grouping).
+      const currentIds = records.map((r) => r.id);
+      const { error: deleteError } = await supabase
+        .from("features")
+        .delete()
+        .eq("source_type", sourceType)
+        .not("id", "in", `(${currentIds.map((id) => `"${id}"`).join(",")})`);
+      if (deleteError) throw deleteError;
     }
 
     await supabase.from("sync_log").insert({
@@ -43,7 +44,7 @@ async function syncSource(sourceType: SourceType, getRecords: () => Promise<Feat
       records_upserted: records.length,
     };
   } catch (error) {
-    const message = errorMessage(error);
+    const message = error instanceof Error ? error.message : "Unknown sync error";
 
     await supabase.from("sync_log").insert({
       source_type: sourceType,

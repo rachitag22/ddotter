@@ -25,8 +25,8 @@ const EXISTING_BIKE_TRAILS_URL =
   "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Transportation_Bikes_Trails_WebMercator/MapServer/4/query";
 const PLANNED_MULTI_USE_TRAILS_URL =
   "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Transportation_Bikes_Trails_WebMercator/MapServer/1/query";
-const MEMORIALS_URL =
-  "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Cultural_and_Society_WebMercator/MapServer/55/query";
+const PUBLIC_ART_URL =
+  "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Cultural_and_Society_WebMercator/MapServer/18/query";
 
 function asString(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
@@ -205,32 +205,37 @@ function normalizePlannedTrail(feature: ArcGisFeature): FeatureRecord | null {
   };
 }
 
-function normalizeMemorial(feature: ArcGisFeature): FeatureRecord | null {
+function normalizePublicArt(feature: ArcGisFeature): FeatureRecord | null {
   const raw = feature.properties;
-  const objectId = asString(pick(raw, "DCGIS.PLACE_NAMES_PT.OBJECTID", "OBJECTID"));
-  const name = asString(pick(raw, "DCGIS.PLACE_NAMES_PT.NAME", "NAME"));
+  const objectId = asString(raw.OBJECTID);
+  const name = asString(raw.TITLE) ?? asString(raw.ARTWORKNAME);
 
   if (!objectId || !name || !feature.geometry) return null;
+
+  const artist = asString(raw.ARTIST);
+  const medium = asString(raw.MEDIUM) ?? asString(raw.ARTWORKTYPE);
+  const location = asString(raw.LOCATION) ?? asString(raw.SUBLOCALITY);
+  const descParts = [
+    artist ? `By ${artist}.` : null,
+    medium,
+    location ? `Located at ${location}.` : null,
+  ].filter(Boolean);
 
   return {
     id: `art-installation-${objectId}`,
     source_type: "art_installation",
     source_id: objectId,
     name,
-    status: normalizeStatus(pick(raw, "DCGIS.PLACE_NAMES_PT.STATUS", "STATUS")),
-    ward: asString(pick(raw, "DCGIS.ADDRESSES_PT.WARD", "WARD")),
-    mode: asString(pick(raw, "MAR.VW_PLACE_NAME_CATEGORIES.CATEGORY", "CATEGORY")) ?? "Memorial",
-    description: asString(pick(raw, "DCGIS.ADDRESSES_PT.ADDRESS", "ADDRESS")),
-    timeline_start: asDate(pick(raw, "DCGIS.PLACE_NAMES_PT.BEGIN_DATE", "BEGIN_DATE")),
+    status: "complete",
+    ward: asString(raw.WARD),
+    mode: medium ?? "Public art",
+    description: descParts.length ? descParts.join(" ") : asString(raw.DESCRIPTION),
+    timeline_start: raw.YEARINSTALLED ? `${asString(raw.YEARINSTALLED)}-01-01` : asDate(raw.CREATED_DATE),
     timeline_end: null,
     cost: null,
-    official_url: null,
+    official_url: asString(raw.URL),
     geometry: feature.geometry,
-    raw: {
-      ...raw,
-      source_note:
-        "DCGIS Memorials layer, used as the initial art/cultural installation feed until a dedicated public art installation dataset is identified.",
-    },
+    raw,
     synced_at: new Date().toISOString(),
   };
 }
@@ -315,9 +320,21 @@ export async function fetchBikeLanes() {
       }
     }
 
+    // Collect unique facility types across segments (e.g. "Protected Bike Lane, Bike Lane")
+    const facilities = [
+      ...new Set(
+        bucket
+          .map((f) => asString(f.properties.Facility) ?? asString(f.properties.Asset))
+          .filter((v): v is string => v !== null),
+      ),
+    ];
+
     merged.push({
       geometry: lines.length > 0 ? { type: "MultiLineString", coordinates: lines } : bucket[0].geometry,
-      properties: bucket[0].properties,
+      properties: {
+        ...bucket[0].properties,
+        Facility: facilities.length ? facilities.join(", ") : bucket[0].properties.Facility,
+      },
     });
   }
 
@@ -337,8 +354,8 @@ export async function fetchTrailProjects() {
 }
 
 export async function fetchArtInstallations() {
-  const features = await fetchArcGisFeatures(MEMORIALS_URL, { paginate: false });
-  return features.map(normalizeMemorial).filter((feature): feature is FeatureRecord => Boolean(feature));
+  const features = await fetchArcGisFeatures(PUBLIC_ART_URL, { paginate: true });
+  return features.map(normalizePublicArt).filter((feature): feature is FeatureRecord => Boolean(feature));
 }
 
 export async function fetchAllArcGisFeatures() {
