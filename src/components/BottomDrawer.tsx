@@ -175,9 +175,6 @@ export function BottomDrawer({
               <option value="complete">Complete</option>
               <option value="unknown">Unknown</option>
             </select>
-            <button className="filter-apply" type="submit">
-              Apply
-            </button>
           </div>
         </form>
 

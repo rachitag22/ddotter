@@ -411,16 +411,6 @@ button:disabled {
   min-width: 96px;
 }
 
-.filter-apply {
-  background: var(--green);
-  border: 0;
-  border-radius: var(--r-md);
-  color: var(--panel);
-  cursor: pointer;
-  padding: 9px 18px;
-  transition: opacity var(--ease-base);
-}
-
 /* ─────────────────────────────────────────────────────────────────────────
    Project list (inside drawer)
    ───────────────────────────────────────────────────────────────────────── */
