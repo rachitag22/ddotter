@@ -333,6 +333,12 @@ export async function fetchBikeLanes() {
     const segments = bucket.map((f) => ({
       facility: asString(f.properties.Facility) ?? asString(f.properties.Asset),
       label: asString(f.properties.Label),
+      coordinates:
+        f.geometry?.type === "LineString"
+          ? (f.geometry.coordinates as [number, number][])
+          : f.geometry?.type === "MultiLineString"
+            ? (f.geometry.coordinates as [number, number][][]).flat()
+            : ([] as [number, number][]),
     }));
 
     merged.push({

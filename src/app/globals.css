@@ -369,6 +369,27 @@ button:disabled {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
+   Map segment tooltips (facility-type labels on bike lane segments)
+   ───────────────────────────────────────────────────────────────────────── */
+
+.seg-tooltip {
+  background: rgba(23, 33, 29, 0.82);
+  border: none;
+  border-radius: var(--r-pill);
+  box-shadow: none;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+
+.seg-tooltip::before {
+  display: none;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
    Segment breakdown (bike lanes with mixed facility types)
    ───────────────────────────────────────────────────────────────────────── */
 
