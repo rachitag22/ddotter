@@ -55,6 +55,17 @@ export function FeatureModal({
           </section>
         </div>
 
+        {feature.official_url && (
+          <a
+            className="modal-ddot-link"
+            href={feature.official_url}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            View on DDOT website ↗
+          </a>
+        )}
+
         <FeedbackForm featureId={feature.id} />
 
         <p className="modal-permalink">

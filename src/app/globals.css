@@ -341,6 +341,23 @@ button:disabled {
   margin: 0;
 }
 
+.modal-ddot-link {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  color: var(--text);
+  display: inline-block;
+  font-size: var(--t-sm);
+  font-weight: 500;
+  padding: 9px 14px;
+  transition: border-color var(--ease-base), background var(--ease-base);
+}
+
+.modal-ddot-link:hover {
+  background: var(--line);
+  border-color: var(--muted);
+}
+
 .modal-permalink {
   font-size: var(--t-sm);
   margin: 0;
