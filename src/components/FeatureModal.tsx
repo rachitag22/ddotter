@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FeedbackForm } from "@/components/FeedbackForm";
+import { SegmentList } from "@/components/SegmentList";
 import { sourceTypeLabel } from "@/lib/design";
 import { buildCloseUrl } from "@/lib/url";
 import type { FeatureFilters, FeatureRecord } from "@/lib/types";
@@ -36,6 +37,7 @@ export function FeatureModal({
 
         <h2 className="modal-title" id="modal-title">{feature.name}</h2>
         {feature.description && <p className="modal-desc">{feature.description}</p>}
+        <SegmentList feature={feature} />
 
         <div className="project-grid">
           <section>

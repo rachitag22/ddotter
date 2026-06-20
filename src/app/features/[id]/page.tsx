@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FeedbackForm } from "@/components/FeedbackForm";
+import { SegmentList } from "@/components/SegmentList";
 import { sourceTypeLabel } from "@/lib/design";
 import { getFeature } from "@/lib/features";
 
@@ -29,6 +30,7 @@ export default async function FeatureDetail({ params }: PageProps) {
         </div>
         <h1>{feature.name}</h1>
         <p>{feature.description}</p>
+        <SegmentList feature={feature} />
         <div className="project-grid">
           <section>
             <h2>Timeline</h2>

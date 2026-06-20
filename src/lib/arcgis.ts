@@ -329,11 +329,18 @@ export async function fetchBikeLanes() {
       ),
     ];
 
+    // Store per-segment breakdown so the modal can show "sharrow on blocks X–Y"
+    const segments = bucket.map((f) => ({
+      facility: asString(f.properties.Facility) ?? asString(f.properties.Asset),
+      label: asString(f.properties.Label),
+    }));
+
     merged.push({
       geometry: lines.length > 0 ? { type: "MultiLineString", coordinates: lines } : bucket[0].geometry,
       properties: {
         ...bucket[0].properties,
         Facility: facilities.length ? facilities.join(", ") : bucket[0].properties.Facility,
+        _segments: segments,
       },
     });
   }

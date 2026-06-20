@@ -369,6 +369,50 @@ button:disabled {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
+   Segment breakdown (bike lanes with mixed facility types)
+   ───────────────────────────────────────────────────────────────────────── */
+
+.segment-list {
+  margin: 12px 0 0;
+}
+
+.segment-list h2 {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 6px;
+}
+
+.segment-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.segment-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: var(--t-sm);
+}
+
+.seg-facility {
+  font-weight: 500;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.seg-label {
+  color: var(--muted);
+  font-size: var(--t-xs);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
    Filters inside the drawer
    ───────────────────────────────────────────────────────────────────────── */
 
