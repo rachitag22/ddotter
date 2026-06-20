@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { sourceTypeColor } from "@/lib/design";
@@ -42,6 +42,7 @@ export function MapView({
   selectedId?: string;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   return (
     <MapContainer
@@ -62,7 +63,9 @@ export function MapView({
       {features.flatMap((feature) => {
         const isSelected = feature.id === selectedId;
         const fill = sourceTypeColor[feature.source_type] ?? sourceTypeColor.capital_project;
-        const onClick = () => router.push(`/?selected=${feature.id}`);
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("selected", feature.id);
+        const onClick = () => router.push(`/?${params.toString()}`);
 
         // Bike lanes: render each segment with its own facility color + label
         if (feature.source_type === "bike_lane") {
@@ -120,7 +123,7 @@ export function MapView({
           return [
             <Polyline
               eventHandlers={{ click: onClick }}
-              key={feature.id}
+              key={`${feature.id}-${isSelected}`}
               pathOptions={{ color: fill, opacity: isSelected ? 1 : 0.75, weight: isSelected ? 9 : 5 }}
               positions={positions}
             />,
@@ -134,7 +137,7 @@ export function MapView({
           return [
             <Polyline
               eventHandlers={{ click: onClick }}
-              key={feature.id}
+              key={`${feature.id}-${isSelected}`}
               pathOptions={{ color: fill, opacity: isSelected ? 1 : 0.75, weight: isSelected ? 9 : 5 }}
               positions={positions}
             />,
