@@ -21,8 +21,12 @@ async function handleEnrich(request: Request) {
 
   const url = new URL(request.url);
   const sourceTypeFilter = url.searchParams.get("source_type");
-  const limitParam = url.searchParams.get("limit");
-  const limit = limitParam ? parseInt(limitParam, 10) : undefined;
+  const envLimit = process.env.ENRICH_LIMIT ? parseInt(process.env.ENRICH_LIMIT, 10) : undefined;
+  const queryLimit = url.searchParams.get("limit");
+  const limit =
+    envLimit != null && queryLimit != null
+      ? Math.min(envLimit, parseInt(queryLimit, 10))
+      : envLimit ?? (queryLimit ? parseInt(queryLimit, 10) : undefined);
 
   const ENRICHABLE_TYPES = ["bike_lane", "capital_project", "trail_project"];
   const targetTypes = sourceTypeFilter
