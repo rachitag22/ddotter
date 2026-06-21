@@ -73,13 +73,6 @@ function normalizeStatus(value: unknown): ProjectStatus {
   return "unknown";
 }
 
-function pick(raw: Record<string, unknown>, ...keys: string[]) {
-  for (const key of keys) {
-    if (raw[key] !== null && raw[key] !== undefined && raw[key] !== "") return raw[key];
-  }
-  return null;
-}
-
 function normalizeCapitalProject(feature: ArcGisFeature): FeatureRecord | null {
   const raw = feature.properties;
   const objectId = asString(raw.OBJECTID);
