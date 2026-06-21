@@ -99,10 +99,12 @@ async function handleSync(request: Request) {
   const resolvedLabelLimit = Math.min(effectiveEnvLabel, effectiveQueryLabel);
   const labelLimit = resolvedLabelLimit === Infinity ? undefined : resolvedLabelLimit;
 
-  const capitalProjects = await syncSource("capital_project", fetchCapitalProjects);
-  const bikeLanes = await syncSource("bike_lane", () => fetchBikeLanes({ labelLimit }));
-  const trailProjects = await syncSource("trail_project", fetchTrailProjects);
-  const artInstallations = await syncSource("art_installation", fetchArtInstallations);
+  const [capitalProjects, bikeLanes, trailProjects, artInstallations] = await Promise.all([
+    syncSource("capital_project", fetchCapitalProjects),
+    syncSource("bike_lane", () => fetchBikeLanes({ labelLimit })),
+    syncSource("trail_project", fetchTrailProjects),
+    syncSource("art_installation", fetchArtInstallations),
+  ]);
   const sources = [capitalProjects, bikeLanes, trailProjects, artInstallations];
 
   return NextResponse.json({

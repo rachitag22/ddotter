@@ -5,7 +5,7 @@ import Link from "next/link";
 import { FeedbackForm } from "@/components/FeedbackForm";
 import { sourceTypeLabel } from "@/lib/design";
 import { buildCloseUrl, buildSelectedUrl } from "@/lib/url";
-import type { FeatureRecord, FeatureFilters } from "@/lib/types";
+import type { ListFeatureRecord, FeatureFilters } from "@/lib/types";
 
 type DrawerState = "peek" | "half" | "full" | "preview";
 
@@ -36,10 +36,10 @@ export function BottomDrawer({
   selectedId,
   selectedFeature,
 }: {
-  features: FeatureRecord[];
+  features: ListFeatureRecord[];
   filters: FeatureFilters;
   selectedId?: string;
-  selectedFeature?: FeatureRecord | null;
+  selectedFeature?: ListFeatureRecord | null;
 }) {
   const isDetail = !!selectedFeature;
   const [snapState, setSnapState] = useState<DrawerState>(isDetail ? "preview" : "peek");

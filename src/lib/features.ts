@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { sampleFeatures } from "@/lib/sample-data";
 import { getSupabaseServerClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { FeatureFilters, FeatureRecord } from "@/lib/types";
@@ -28,11 +29,7 @@ export function getFiltersFromSearchParams(searchParams: URLSearchParams): Featu
   };
 }
 
-export async function getFeatures(filters: FeatureFilters = {}) {
-  if (!hasSupabaseConfig()) {
-    return sampleFeatures.filter((feature) => matchesFilters(feature, filters));
-  }
-
+async function fetchFeatures(filters: FeatureFilters): Promise<FeatureRecord[]> {
   const supabase = getSupabaseServerClient();
   const pageSize = 1000;
   const features: FeatureRecord[] = [];
@@ -62,6 +59,20 @@ export async function getFeatures(filters: FeatureFilters = {}) {
   }
 
   return features;
+}
+
+// Cache per unique filter combination; revalidate after each sync run via the
+// "features" tag (call revalidateTag("features") from the sync route).
+const getCachedFeatures = unstable_cache(fetchFeatures, ["features"], {
+  revalidate: 300,
+  tags: ["features"],
+});
+
+export async function getFeatures(filters: FeatureFilters = {}) {
+  if (!hasSupabaseConfig()) {
+    return sampleFeatures.filter((feature) => matchesFilters(feature, filters));
+  }
+  return getCachedFeatures(filters);
 }
 
 export async function getFeature(id: string) {

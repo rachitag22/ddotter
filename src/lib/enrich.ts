@@ -75,14 +75,18 @@ export async function cleanSegmentLabels(labels: string[]): Promise<Map<string, 
   const unique = [...new Set(labels.filter(Boolean))];
   if (!unique.length || !process.env.ANTHROPIC_API_KEY) return new Map();
 
-  const result = new Map<string, string>();
+  const batches: string[][] = [];
   for (let i = 0; i < unique.length; i += LABEL_BATCH_SIZE) {
-    try {
-      const cleaned = await cleanLabelBatch(unique.slice(i, i + LABEL_BATCH_SIZE));
-      for (const [orig, clean] of cleaned) result.set(orig, clean);
-    } catch {
-      // partial success is fine; originals used for failed batches
-    }
+    batches.push(unique.slice(i, i + LABEL_BATCH_SIZE));
+  }
+
+  const batchResults = await Promise.all(
+    batches.map((batch) => cleanLabelBatch(batch).catch(() => new Map<string, string>())),
+  );
+
+  const result = new Map<string, string>();
+  for (const cleaned of batchResults) {
+    for (const [orig, clean] of cleaned) result.set(orig, clean);
   }
   return result;
 }

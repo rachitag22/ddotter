@@ -34,6 +34,10 @@ export type FeatureFilters = {
   q?: string;
 };
 
+// Slim projection used in the drawer list — excludes raw ArcGIS JSON and
+// geometry coordinates which are only needed by the map renderer.
+export type ListFeatureRecord = Omit<FeatureRecord, "raw" | "geometry">;
+
 export type FeedbackPayload = {
   support: boolean;
   comment: string;

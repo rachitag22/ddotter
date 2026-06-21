@@ -56,18 +56,21 @@ async function handleEnrich(request: Request) {
   const results = [];
   let updated = 0;
 
-  for (const record of allRecords) {
-    byType[record.source_type] = (byType[record.source_type] ?? 0) + 1;
-    const result = await enrichRecord(record);
-    results.push(result);
+  const CONCURRENCY = 10;
+  for (let i = 0; i < allRecords.length; i += CONCURRENCY) {
+    const batch = allRecords.slice(i, i + CONCURRENCY);
+    for (const r of batch) byType[r.source_type] = (byType[r.source_type] ?? 0) + 1;
 
-    if (result.updated && result.description) {
-      await supabase
-        .from("features")
-        .update({ description: result.description })
-        .eq("id", record.id);
-      updated++;
-    }
+    const batchResults = await Promise.all(batch.map(enrichRecord));
+    results.push(...batchResults);
+
+    const toUpdate = batchResults.filter((r) => r.updated && r.description);
+    updated += toUpdate.length;
+    await Promise.all(
+      toUpdate.map((r) =>
+        supabase.from("features").update({ description: r.description }).eq("id", r.id),
+      ),
+    );
   }
 
   return NextResponse.json({
