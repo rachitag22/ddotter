@@ -1,6 +1,11 @@
 import { getFeature, getFeatures } from "@/lib/features";
 import { MapWrapper } from "@/components/MapWrapper";
 import { BottomDrawer } from "@/components/BottomDrawer";
+import type { FeatureRecord } from "@/lib/types";
+
+function toListFeature({ raw: _raw, geometry: _geo, ...rest }: FeatureRecord) {
+  return rest;
+}
 
 type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -30,10 +35,10 @@ export default async function Home({ searchParams }: PageProps) {
     <div className="app">
       <MapWrapper features={features} filters={filters} selectedId={selected} />
       <BottomDrawer
-        features={features}
+        features={features.map(toListFeature)}
         filters={filters}
         selectedId={selected}
-        selectedFeature={selectedFeature}
+        selectedFeature={selectedFeature ? toListFeature(selectedFeature) : null}
       />
     </div>
   );
