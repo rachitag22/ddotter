@@ -90,8 +90,12 @@ async function handleSync(request: Request) {
     return NextResponse.json({ error: "Supabase is not configured" }, { status: 500 });
   }
 
+  const url = new URL(request.url);
+  const labelLimitParam = url.searchParams.get("label_limit");
+  const labelLimit = labelLimitParam ? parseInt(labelLimitParam, 10) : undefined;
+
   const capitalProjects = await syncSource("capital_project", fetchCapitalProjects);
-  const bikeLanes = await syncSource("bike_lane", fetchBikeLanes);
+  const bikeLanes = await syncSource("bike_lane", () => fetchBikeLanes({ labelLimit }));
   const trailProjects = await syncSource("trail_project", fetchTrailProjects);
   const artInstallations = await syncSource("art_installation", fetchArtInstallations);
   const sources = [capitalProjects, bikeLanes, trailProjects, artInstallations];

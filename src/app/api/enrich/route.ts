@@ -21,6 +21,8 @@ async function handleEnrich(request: Request) {
 
   const url = new URL(request.url);
   const sourceTypeFilter = url.searchParams.get("source_type");
+  const limitParam = url.searchParams.get("limit");
+  const limit = limitParam ? parseInt(limitParam, 10) : undefined;
 
   const ENRICHABLE_TYPES = ["bike_lane", "capital_project", "trail_project"];
   const targetTypes = sourceTypeFilter
@@ -44,7 +46,7 @@ async function handleEnrich(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const allRecords = records ?? [];
+  const allRecords = (records ?? []).slice(0, limit);
   const byType: Record<string, number> = {};
   const results = [];
   let updated = 0;

@@ -285,7 +285,7 @@ export async function fetchCapitalProjects() {
   return features.map(normalizeCapitalProject).filter((feature): feature is FeatureRecord => Boolean(feature));
 }
 
-export async function fetchBikeLanes() {
+export async function fetchBikeLanes(options: { labelLimit?: number } = {}) {
   const features = await fetchArcGisFeatures(BIKE_LANES_URL, { paginate: true });
 
   // The ArcGIS layer stores one record per physical segment. Group by Project
@@ -357,7 +357,8 @@ export async function fetchBikeLanes() {
     const segs = f.properties._segments as Array<{ label: string | null }> | undefined;
     return segs ? segs.map((s) => s.label).filter((l): l is string => l !== null) : [];
   });
-  const cleanedLabels = await cleanSegmentLabels(rawLabels);
+  const labelsToClean = options.labelLimit != null ? rawLabels.slice(0, options.labelLimit) : rawLabels;
+  const cleanedLabels = await cleanSegmentLabels(labelsToClean);
   if (cleanedLabels.size) {
     for (const f of merged) {
       const segs = f.properties._segments as Array<{ facility: string | null; label: string | null; coordinates: [number, number][] }> | undefined;
