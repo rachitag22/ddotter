@@ -1,4 +1,5 @@
 import type { FeatureRecord, Geometry, ProjectStatus, SourceType } from "@/lib/types";
+import { cleanSegmentLabels } from "@/lib/clean-labels";
 
 type ArcGisFeature = {
   geometry: Geometry | null;
@@ -25,8 +26,8 @@ const EXISTING_BIKE_TRAILS_URL =
   "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Transportation_Bikes_Trails_WebMercator/MapServer/4/query";
 const PLANNED_MULTI_USE_TRAILS_URL =
   "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Transportation_Bikes_Trails_WebMercator/MapServer/1/query";
-const MEMORIALS_URL =
-  "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Cultural_and_Society_WebMercator/MapServer/55/query";
+const PUBLIC_ART_URL =
+  "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Cultural_and_Society_WebMercator/MapServer/18/query";
 
 function asString(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
@@ -115,7 +116,10 @@ function normalizeBikeLane(feature: ArcGisFeature): FeatureRecord | null {
 
   if (!objectId || !name || !feature.geometry) return null;
 
-  const slug = bikeLaneSlug(project?.trim() || routeName || objectId);
+  const slug = (project?.trim() || routeName || objectId)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 
   return {
     id: `bike-lane-${slug}`,
@@ -134,13 +138,6 @@ function normalizeBikeLane(feature: ArcGisFeature): FeatureRecord | null {
     raw,
     synced_at: new Date().toISOString(),
   };
-}
-
-function bikeLaneSlug(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
 }
 
 function normalizeExistingTrail(feature: ArcGisFeature): FeatureRecord | null {
@@ -206,32 +203,37 @@ function normalizePlannedTrail(feature: ArcGisFeature): FeatureRecord | null {
   };
 }
 
-function normalizeMemorial(feature: ArcGisFeature): FeatureRecord | null {
+function normalizePublicArt(feature: ArcGisFeature): FeatureRecord | null {
   const raw = feature.properties;
-  const objectId = asString(pick(raw, "DCGIS.PLACE_NAMES_PT.OBJECTID", "OBJECTID"));
-  const name = asString(pick(raw, "DCGIS.PLACE_NAMES_PT.NAME", "NAME"));
+  const objectId = asString(raw.OBJECTID);
+  const name = asString(raw.TITLE) ?? asString(raw.ARTWORKNAME);
 
   if (!objectId || !name || !feature.geometry) return null;
+
+  const artist = asString(raw.ARTIST);
+  const medium = asString(raw.MEDIUM) ?? asString(raw.ARTWORKTYPE);
+  const location = asString(raw.LOCATION) ?? asString(raw.SUBLOCALITY);
+  const descParts = [
+    artist ? `By ${artist}.` : null,
+    medium,
+    location ? `Located at ${location}.` : null,
+  ].filter(Boolean);
 
   return {
     id: `art-installation-${objectId}`,
     source_type: "art_installation",
     source_id: objectId,
     name,
-    status: normalizeStatus(pick(raw, "DCGIS.PLACE_NAMES_PT.STATUS", "STATUS")),
-    ward: asString(pick(raw, "DCGIS.ADDRESSES_PT.WARD", "WARD")),
-    mode: asString(pick(raw, "MAR.VW_PLACE_NAME_CATEGORIES.CATEGORY", "CATEGORY")) ?? "Memorial",
-    description: asString(pick(raw, "DCGIS.ADDRESSES_PT.ADDRESS", "ADDRESS")),
-    timeline_start: asDate(pick(raw, "DCGIS.PLACE_NAMES_PT.BEGIN_DATE", "BEGIN_DATE")),
+    status: "complete",
+    ward: asString(raw.WARD),
+    mode: medium ?? "Public art",
+    description: descParts.length ? descParts.join(" ") : asString(raw.DESCRIPTION),
+    timeline_start: raw.YEARINSTALLED ? `${asString(raw.YEARINSTALLED)}-01-01` : asDate(raw.CREATED_DATE),
     timeline_end: null,
     cost: null,
-    official_url: null,
+    official_url: asString(raw.URL),
     geometry: feature.geometry,
-    raw: {
-      ...raw,
-      source_note:
-        "DCGIS Memorials layer, used as the initial art/cultural installation feed until a dedicated public art installation dataset is identified.",
-    },
+    raw,
     synced_at: new Date().toISOString(),
   };
 }
@@ -286,12 +288,11 @@ export async function fetchBikeLanes() {
   const groups = new Map<string, ArcGisFeature[]>();
   for (const feature of features) {
     const raw = feature.properties;
-    const rawKey =
+    const key =
       asString(raw.Project)?.trim() ||
       asString(raw.RouteName)?.trim() ||
       asString(raw.ObjectID) ||
       "unknown";
-    const key = bikeLaneSlug(rawKey);
     const bucket = groups.get(key) ?? [];
     bucket.push(feature);
     groups.set(key, bucket);
@@ -322,7 +323,6 @@ export async function fetchBikeLanes() {
       ),
     ];
 
-    // Store per-segment breakdown so the modal and map can show facility type per block
     const segments = bucket.map((f) => ({
       facility: asString(f.properties.Facility) ?? asString(f.properties.Asset),
       label: asString(f.properties.Label),
@@ -344,6 +344,24 @@ export async function fetchBikeLanes() {
     });
   }
 
+  // Clean segment labels to human-readable form (ALL CAPS → title case, etc.)
+  const rawLabels = merged.flatMap((f) => {
+    const segs = f.properties._segments as Array<{ label: string | null }> | undefined;
+    return segs ? segs.map((s) => s.label).filter((l): l is string => l !== null) : [];
+  });
+  const cleanedLabels = await cleanSegmentLabels(rawLabels);
+  if (cleanedLabels.size) {
+    for (const f of merged) {
+      const segs = f.properties._segments as Array<{ facility: string | null; label: string | null; coordinates: [number, number][] }> | undefined;
+      if (segs) {
+        f.properties._segments = segs.map((s) => ({
+          ...s,
+          label: s.label ? (cleanedLabels.get(s.label) ?? s.label) : null,
+        }));
+      }
+    }
+  }
+
   return merged.map(normalizeBikeLane).filter((feature): feature is FeatureRecord => Boolean(feature));
 }
 
@@ -360,8 +378,8 @@ export async function fetchTrailProjects() {
 }
 
 export async function fetchArtInstallations() {
-  const features = await fetchArcGisFeatures(MEMORIALS_URL, { paginate: false });
-  return features.map(normalizeMemorial).filter((feature): feature is FeatureRecord => Boolean(feature));
+  const features = await fetchArcGisFeatures(PUBLIC_ART_URL, { paginate: true });
+  return features.map(normalizePublicArt).filter((feature): feature is FeatureRecord => Boolean(feature));
 }
 
 export async function fetchAllArcGisFeatures() {
