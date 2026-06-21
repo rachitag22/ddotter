@@ -92,8 +92,13 @@ async function handleSync(request: Request) {
   }
 
   const url = new URL(request.url);
-  const labelLimitParam = url.searchParams.get("label_limit");
-  const labelLimit = labelLimitParam ? parseInt(labelLimitParam, 10) : undefined;
+  // LABEL_CLEAN_LIMIT: unset = 10 (safe default), -1 = unlimited
+  const envLabelLimit = process.env.LABEL_CLEAN_LIMIT != null ? parseInt(process.env.LABEL_CLEAN_LIMIT, 10) : 10;
+  const queryLabelLimit = url.searchParams.get("label_limit");
+  const effectiveEnvLabel = envLabelLimit === -1 ? Infinity : envLabelLimit;
+  const effectiveQueryLabel = queryLabelLimit == null ? Infinity : (parseInt(queryLabelLimit, 10) === -1 ? Infinity : parseInt(queryLabelLimit, 10));
+  const resolvedLabelLimit = Math.min(effectiveEnvLabel, effectiveQueryLabel);
+  const labelLimit = resolvedLabelLimit === Infinity ? undefined : resolvedLabelLimit;
 
   const [capitalProjects, bikeLanes, trailProjects, artInstallations] = await Promise.all([
     syncSource("capital_project", fetchCapitalProjects),

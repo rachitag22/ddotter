@@ -7,7 +7,7 @@ Canonical record for every project, trail, and art installation.
 | Column | Type | Notes |
 | --- | --- | --- |
 | `id` | text primary key | Deterministic source id, such as `capital-project-123` |
-| `source_type` | text | `capital_project`, `trail_project`, `art_installation` |
+| `source_type` | text | `capital_project`, `bike_lane`, `trail_project`, `art_installation` |
 | `source_id` | text | Upstream object id or stable upstream id |
 | `name` | text | Public display name |
 | `status` | text | `active`, `planned`, `complete`, `unknown` |
@@ -31,7 +31,7 @@ alter table features
 
 alter table features
   add constraint features_source_type_check
-  check (source_type in ('capital_project', 'trail_project', 'art_installation'));
+  check (source_type in ('capital_project', 'bike_lane', 'trail_project', 'art_installation'));
 ```
 
 Suggested indexes:

@@ -46,6 +46,9 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SYNC_SECRET=
 CRON_SECRET=
+ANTHROPIC_API_KEY=      # required for /api/enrich and bike lane label cleaning
+LABEL_CLEAN_LIMIT=      # max labels cleaned per sync; default 10, -1 = unlimited
+ENRICH_LIMIT=           # max records enriched per /api/enrich call; default 10, -1 = unlimited
 ```
 
 ## Local Development

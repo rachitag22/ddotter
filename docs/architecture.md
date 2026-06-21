@@ -5,36 +5,53 @@
 ```text
 ArcGIS REST Feature Services
           |
-          | hourly sync only
+          | daily sync only (never on page load)
           v
-Supabase Postgres
+/api/sync → Supabase Postgres
           |
-          | all reads
+          | optional, on-demand
           v
-Vercel API Routes
+/api/enrich (Claude Haiku) → Supabase (description field)
           |
+          | all reads via features_with_feedback view
           v
-Next.js Frontend
+Vercel API Routes → Next.js Frontend
 ```
 
-The app does not call ArcGIS from the request path. ArcGIS is treated as an upstream source that is periodically copied into Supabase.
+ArcGIS is never called from the page-load request path. It is treated as an upstream source copied into Supabase by the sync job.
 
 ## Source Services
 
-| Source | Endpoint | Geometry | MVP Status |
-| --- | --- | --- | --- |
-| Capital Projects | `https://maps2.dcgis.dc.gov/dcgis/rest/services/DDOT/PTP/FeatureServer/0` | Points | Required |
-| Trail Projects | `https://maps2.dcgis.dc.gov/dcgis/rest/services/DDOT/Trails/FeatureServer/0` | Polylines | Required |
-| Art Installations | TBD, likely `opendata.dc.gov` | Points | Stubbed |
+| source_type | ArcGIS Endpoint | Geometry |
+| --- | --- | --- |
+| `capital_project` | DDOT/PTP/FeatureServer/0 | Point |
+| `bike_lane` | DDOT/BikeLane/FeatureServer/0 | MultiLineString (segments merged by Project/RouteName) |
+| `trail_project` (existing) | Transportation_Bikes_Trails/MapServer/4 | LineString |
+| `trail_project` (planned) | Transportation_Bikes_Trails/MapServer/1 | LineString |
+| `art_installation` | Cultural_and_Society/MapServer/18 | Point |
+
+Bike lane ArcGIS records are one row per physical segment. `fetchBikeLanes()` groups them by `Project` (fallback: `RouteName`) and merges into a single `FeatureRecord` with a MultiLineString geometry. Per-segment metadata (facility type, street label, coordinates) is stored in `raw._segments`.
 
 ## Sync Flow
 
-1. Cron calls `POST /api/sync`.
-2. Route validates `SYNC_SECRET`.
-3. Each source adapter fetches from ArcGIS.
-4. Source records are normalized into canonical `features` records.
-5. Records are upserted by deterministic `id`.
-6. Each source run is recorded in `sync_log`.
+1. Vercel Cron (`0 5 * * *`) calls `GET /api/sync`; or trigger manually with `Authorization: Bearer <SYNC_SECRET>`.
+2. Route validates auth and Supabase config.
+3. Each source adapter fetches paginated GeoJSON from ArcGIS.
+4. Records are normalized into canonical `FeatureRecord` shape.
+5. For bike lanes, Claude Haiku cleans ALL-CAPS segment labels to title case (controlled by `LABEL_CLEAN_LIMIT` env var; default 10, `-1` for unlimited).
+6. Records are upserted by deterministic `id` (e.g., `capital-project-123`, `bike-lane-<slug>`).
+7. Stale records for each source are deleted: `DELETE WHERE source_type = X AND synced_at < <run_start>`.
+8. Each source run is recorded in `sync_log`.
+
+## Enrichment Flow (optional, separate from sync)
+
+`POST /api/enrich` fills `description` for records that have a null or empty description, using Claude Haiku:
+
+- `bike_lane`: scrapes `official_url`, then summarizes
+- `capital_project`: synthesizes from structured fields (ward, status, cost, location, etc.)
+- `trail_project`: synthesizes from structured fields (trail class, surface, maintenance, length, etc.)
+
+Controlled by `ENRICH_LIMIT` env var (default 10, `-1` for unlimited). Can be filtered by `?source_type=` and `?limit=`.
 
 ## Runtime Reads
 
