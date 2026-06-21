@@ -1,10 +1,6 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 
-/**
- * Fetch a URL and strip it to plain text suitable for an LLM prompt.
- * Returns null on network error or non-200.
- */
 export async function fetchPageText(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
@@ -25,10 +21,6 @@ export async function fetchPageText(url: string): Promise<string | null> {
   }
 }
 
-/**
- * Ask Claude Haiku to pull a clean 2-3 sentence project description from raw
- * page text. Returns null if no relevant content is found.
- */
 export async function extractDescriptionWithLLM(
   pageText: string,
   projectName: string,
@@ -49,6 +41,52 @@ Write a clear 2-3 sentence description of this project — what it is, where it 
   const trimmed = text.trim();
   return trimmed === "null" || trimmed.toLowerCase().startsWith("null") ? null : trimmed;
 }
+
+const LABEL_BATCH_SIZE = 50;
+
+async function cleanLabelBatch(labels: string[]): Promise<Map<string, string>> {
+  const { text } = await generateText({
+    model: anthropic("claude-haiku-4-5-20251001"),
+    prompt: `Convert these DC bike lane segment labels from ALL CAPS ArcGIS format to clean, human-readable title case.
+
+Rules:
+- Street type abbreviations: St, Ave, Rd, Blvd, Dr, Pl, Ln, Ct, Ter
+- Directional quadrant suffixes always uppercase: NW, NE, SE, SW
+- Ordinals lowercase: 1st, 2nd, 3rd, 4th, 11th, etc.
+- Use lowercase "to" between cross streets
+- Keep the "Street Name: From St to To St" colon format intact
+- Preserve bare block-number ranges like "6 to 7" as-is
+- Do not add or remove any streets or change route names
+
+Return ONLY a valid JSON object with no markdown fences, mapping each original label to its cleaned version:
+{"ORIGINAL LABEL": "Cleaned label"}
+
+Labels to clean (one per line):
+${labels.join("\n")}`,
+    maxOutputTokens: 2000,
+  });
+
+  const stripped = text.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  const parsed = JSON.parse(stripped) as Record<string, string>;
+  return new Map(Object.entries(parsed));
+}
+
+export async function cleanSegmentLabels(labels: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(labels.filter(Boolean))];
+  if (!unique.length || !process.env.ANTHROPIC_API_KEY) return new Map();
+
+  const result = new Map<string, string>();
+  for (let i = 0; i < unique.length; i += LABEL_BATCH_SIZE) {
+    try {
+      const cleaned = await cleanLabelBatch(unique.slice(i, i + LABEL_BATCH_SIZE));
+      for (const [orig, clean] of cleaned) result.set(orig, clean);
+    } catch {
+      // partial success is fine; originals used for failed batches
+    }
+  }
+  return result;
+}
+
 
 export type EnrichResult = {
   id: string;
@@ -72,10 +110,6 @@ export type EnrichableRecord = {
   raw?: Record<string, unknown>;
 };
 
-/**
- * Synthesize a plain-language description from structured fields using the LLM.
- * Used when no external page is available to scrape.
- */
 async function synthesizeDescription(
   record: EnrichableRecord,
   contextLines: string[],

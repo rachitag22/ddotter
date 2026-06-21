@@ -330,7 +330,7 @@ export async function fetchBikeLanes(options: { labelLimit?: number } = {}) {
       ),
     ];
 
-    // Store per-segment breakdown so the modal can show "sharrow on blocks X-Y"
+    // Store per-segment breakdown so the modal can show "sharrow on blocks X–Y"
     const segments = bucket.map((f) => ({
       facility: asString(f.properties.Facility) ?? asString(f.properties.Asset),
       label: asString(f.properties.Label),
@@ -352,7 +352,7 @@ export async function fetchBikeLanes(options: { labelLimit?: number } = {}) {
     });
   }
 
-  // Clean segment labels to human-readable form (ALL CAPS -> title case, etc.)
+  // Clean segment labels to human-readable form (ALL CAPS → title case, etc.)
   const rawLabels = merged.flatMap((f) => {
     const segs = f.properties._segments as Array<{ label: string | null }> | undefined;
     return segs ? segs.map((s) => s.label).filter((l): l is string => l !== null) : [];
