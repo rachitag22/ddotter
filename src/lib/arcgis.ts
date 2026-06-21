@@ -1,5 +1,5 @@
 import type { FeatureRecord, Geometry, ProjectStatus, SourceType } from "@/lib/types";
-import { cleanSegmentLabels } from "@/lib/clean-labels";
+import { cleanSegmentLabels } from "@/lib/enrich";
 
 type ArcGisFeature = {
   geometry: Geometry | null;
@@ -116,6 +116,9 @@ function normalizeBikeLane(feature: ArcGisFeature): FeatureRecord | null {
 
   if (!objectId || !name || !feature.geometry) return null;
 
+  // Use a slug of the project name as the stable ID so that all segments
+  // of the same project (which share the same Project field) upsert into
+  // one record after merging. Fall back to objectId for unnamed segments.
   const slug = (project?.trim() || routeName || objectId)
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -282,9 +285,12 @@ export async function fetchCapitalProjects() {
   return features.map(normalizeCapitalProject).filter((feature): feature is FeatureRecord => Boolean(feature));
 }
 
-export async function fetchBikeLanes() {
+export async function fetchBikeLanes(options: { labelLimit?: number } = {}) {
   const features = await fetchArcGisFeatures(BIKE_LANES_URL, { paginate: true });
 
+  // The ArcGIS layer stores one record per physical segment. Group by Project
+  // (falling back to RouteName) so a 3-mile project becomes a single record
+  // with a merged MultiLineString geometry instead of dozens of short stubs.
   const groups = new Map<string, ArcGisFeature[]>();
   for (const feature of features) {
     const raw = feature.properties;
@@ -315,6 +321,7 @@ export async function fetchBikeLanes() {
       }
     }
 
+    // Collect unique facility types across segments (e.g. "Protected Bike Lane, Bike Lane")
     const facilities = [
       ...new Set(
         bucket
@@ -323,6 +330,7 @@ export async function fetchBikeLanes() {
       ),
     ];
 
+    // Store per-segment breakdown so the modal can show "sharrow on blocks X-Y"
     const segments = bucket.map((f) => ({
       facility: asString(f.properties.Facility) ?? asString(f.properties.Asset),
       label: asString(f.properties.Label),
@@ -344,12 +352,13 @@ export async function fetchBikeLanes() {
     });
   }
 
-  // Clean segment labels to human-readable form (ALL CAPS → title case, etc.)
+  // Clean segment labels to human-readable form (ALL CAPS -> title case, etc.)
   const rawLabels = merged.flatMap((f) => {
     const segs = f.properties._segments as Array<{ label: string | null }> | undefined;
     return segs ? segs.map((s) => s.label).filter((l): l is string => l !== null) : [];
   });
-  const cleanedLabels = await cleanSegmentLabels(rawLabels);
+  const labelsToClean = options.labelLimit != null ? rawLabels.slice(0, options.labelLimit) : rawLabels;
+  const cleanedLabels = await cleanSegmentLabels(labelsToClean);
   if (cleanedLabels.size) {
     for (const f of merged) {
       const segs = f.properties._segments as Array<{ facility: string | null; label: string | null; coordinates: [number, number][] }> | undefined;
