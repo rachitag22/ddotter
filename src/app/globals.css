@@ -48,7 +48,6 @@
   /* Z-index layers */
   --z-map:    0;
   --z-drawer: 10;
-  --z-modal:  20;
 
   /* Desktop sidebar width */
   --sidebar-w: 360px;
@@ -266,82 +265,46 @@ button:disabled {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Modal overlay
+   Drawer — detail mode
    ───────────────────────────────────────────────────────────────────────── */
 
-.modal-overlay {
-  align-items: flex-end;
-  background: rgb(0 0 0 / 45%);
-  display: flex;
-  inset: 0;
-  position: fixed;
-  z-index: var(--z-modal);
+/* Preview: show ~1/3 of the screen (85dvh drawer, offset so 33dvh is visible) */
+.drawer[data-mode="detail"][data-state="preview"] {
+  transform: translateY(calc(85dvh - 33dvh));
 }
 
-.modal-panel {
-  background: var(--panel);
-  border-radius: var(--r-xl) var(--r-xl) 0 0;
+/* data-state="full" already resolves to translateY(0) via the shared rule */
+
+.drawer-back {
+  color: var(--green);
+  font-size: var(--t-sm);
+  font-weight: 500;
+  transition: opacity var(--ease-base);
+}
+
+.drawer-back:hover {
+  opacity: 0.7;
+}
+
+.drawer-detail {
   display: grid;
   gap: 16px;
-  max-height: 88dvh;
-  overflow-y: auto;
-  padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
-  width: 100%;
+  padding-bottom: 32px;
 }
 
-@media (min-width: 768px) {
-  .modal-overlay {
-    align-items: center;
-    justify-content: center;
-    /* Offset right to account for the sidebar */
-    padding-left: var(--sidebar-w);
-  }
-
-  .modal-panel {
-    border-radius: var(--r-lg);
-    max-height: 85vh;
-    max-width: 540px;
-    width: 100%;
-  }
-}
-
-.modal-header {
-  align-items: flex-start;
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-}
-
-.modal-close {
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
-  color: var(--text);
-  flex-shrink: 0;
-  font-size: var(--t-sm);
-  height: 28px;
-  line-height: 1;
-  padding: 0 10px;
-  transition: background var(--ease-base);
-}
-
-.modal-close:hover {
-  background: var(--line);
-}
-
-.modal-title {
-  font-size: clamp(1.1rem, 3vw, 1.4rem);
+.drawer-detail-name {
+  font-size: clamp(1.1rem, 4vw, 1.4rem);
   line-height: 1.3;
   margin: 0;
 }
 
-.modal-desc {
+.drawer-detail-desc {
   color: var(--muted);
   line-height: 1.6;
   margin: 0;
 }
 
-.modal-ddot-link {
+.drawer-ddot-link {
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
@@ -353,18 +316,18 @@ button:disabled {
   transition: border-color var(--ease-base), background var(--ease-base);
 }
 
-.modal-ddot-link:hover {
+.drawer-ddot-link:hover {
   background: var(--line);
   border-color: var(--muted);
 }
 
-.modal-permalink {
+.drawer-permalink {
   font-size: var(--t-sm);
   margin: 0;
   padding-top: 4px;
 }
 
-.modal-permalink a {
+.drawer-permalink a {
   color: var(--green);
 }
 

@@ -36,13 +36,15 @@ begin
     select 1
     from private.sync_secrets
     where key = 'arcgis_sync'
-      and secret_hash = encode(digest(provided_secret, 'sha256'), 'hex')
+      and secret_hash = encode(extensions.digest(provided_secret, 'sha256'), 'hex')
   );
 end;
 $$;
 
 grant usage on schema private to anon;
 grant execute on function private.sync_request_authorized() to anon;
+grant insert, update on public.features to anon;
+grant insert on public.sync_log to anon;
 
 drop policy if exists "Secret sync can insert features" on public.features;
 drop policy if exists "Secret sync can update features" on public.features;
