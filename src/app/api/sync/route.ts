@@ -1,4 +1,3 @@
-import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { fetchArtInstallations, fetchBikeLanes, fetchCapitalProjects, fetchTrailProjects } from "@/lib/arcgis";
 import { hasSupabaseConfig } from "@/lib/supabase";
@@ -107,10 +106,6 @@ async function handleSync(request: Request) {
     syncSource("art_installation", fetchArtInstallations),
   ]);
   const sources = [capitalProjects, bikeLanes, trailProjects, artInstallations];
-
-  if (sources.some((s) => s.status === "success")) {
-    revalidateTag("features");
-  }
 
   return NextResponse.json({
     ok: sources.every((source) => source.status === "success"),
