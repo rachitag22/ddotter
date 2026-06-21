@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { fetchArtInstallations, fetchBikeLanes, fetchCapitalProjects, fetchTrailProjects } from "@/lib/arcgis";
 import { hasSupabaseConfig } from "@/lib/supabase";
@@ -94,11 +95,17 @@ async function handleSync(request: Request) {
   const labelLimitParam = url.searchParams.get("label_limit");
   const labelLimit = labelLimitParam ? parseInt(labelLimitParam, 10) : undefined;
 
-  const capitalProjects = await syncSource("capital_project", fetchCapitalProjects);
-  const bikeLanes = await syncSource("bike_lane", () => fetchBikeLanes({ labelLimit }));
-  const trailProjects = await syncSource("trail_project", fetchTrailProjects);
-  const artInstallations = await syncSource("art_installation", fetchArtInstallations);
+  const [capitalProjects, bikeLanes, trailProjects, artInstallations] = await Promise.all([
+    syncSource("capital_project", fetchCapitalProjects),
+    syncSource("bike_lane", () => fetchBikeLanes({ labelLimit })),
+    syncSource("trail_project", fetchTrailProjects),
+    syncSource("art_installation", fetchArtInstallations),
+  ]);
   const sources = [capitalProjects, bikeLanes, trailProjects, artInstallations];
+
+  if (sources.some((s) => s.status === "success")) {
+    revalidateTag("features");
+  }
 
   return NextResponse.json({
     ok: sources.every((source) => source.status === "success"),
