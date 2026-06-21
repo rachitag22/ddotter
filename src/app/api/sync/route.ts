@@ -91,12 +91,13 @@ async function handleSync(request: Request) {
   }
 
   const url = new URL(request.url);
-  const envLabelLimit = process.env.LABEL_CLEAN_LIMIT ? parseInt(process.env.LABEL_CLEAN_LIMIT, 10) : undefined;
+  // LABEL_CLEAN_LIMIT: unset = 10 (safe default), -1 = unlimited
+  const envLabelLimit = process.env.LABEL_CLEAN_LIMIT != null ? parseInt(process.env.LABEL_CLEAN_LIMIT, 10) : 10;
   const queryLabelLimit = url.searchParams.get("label_limit");
-  const labelLimit =
-    envLabelLimit != null && queryLabelLimit != null
-      ? Math.min(envLabelLimit, parseInt(queryLabelLimit, 10))
-      : envLabelLimit ?? (queryLabelLimit ? parseInt(queryLabelLimit, 10) : undefined);
+  const effectiveEnvLabel = envLabelLimit === -1 ? Infinity : envLabelLimit;
+  const effectiveQueryLabel = queryLabelLimit == null ? Infinity : (parseInt(queryLabelLimit, 10) === -1 ? Infinity : parseInt(queryLabelLimit, 10));
+  const resolvedLabelLimit = Math.min(effectiveEnvLabel, effectiveQueryLabel);
+  const labelLimit = resolvedLabelLimit === Infinity ? undefined : resolvedLabelLimit;
 
   const capitalProjects = await syncSource("capital_project", fetchCapitalProjects);
   const bikeLanes = await syncSource("bike_lane", () => fetchBikeLanes({ labelLimit }));
