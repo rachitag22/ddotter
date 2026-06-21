@@ -1,4 +1,5 @@
 import type { FeatureRecord, Geometry, ProjectStatus, SourceType } from "@/lib/types";
+import { cleanSegmentLabels } from "@/lib/clean-labels";
 
 type ArcGisFeature = {
   geometry: Geometry | null;
@@ -349,6 +350,24 @@ export async function fetchBikeLanes() {
         _segments: segments,
       },
     });
+  }
+
+  // Clean segment labels to human-readable form (ALL CAPS → title case, etc.)
+  const rawLabels = merged.flatMap((f) => {
+    const segs = f.properties._segments as Array<{ label: string | null }> | undefined;
+    return segs ? segs.map((s) => s.label).filter((l): l is string => l !== null) : [];
+  });
+  const cleanedLabels = await cleanSegmentLabels(rawLabels);
+  if (cleanedLabels.size) {
+    for (const f of merged) {
+      const segs = f.properties._segments as Array<{ facility: string | null; label: string | null; coordinates: [number, number][] }> | undefined;
+      if (segs) {
+        f.properties._segments = segs.map((s) => ({
+          ...s,
+          label: s.label ? (cleanedLabels.get(s.label) ?? s.label) : null,
+        }));
+      }
+    }
   }
 
   return merged.map(normalizeBikeLane).filter((feature): feature is FeatureRecord => Boolean(feature));
