@@ -17,7 +17,7 @@ Supabase Postgres (features, feedback, sync_log)
           ▼
 GET /api/enrich  ─── Claude Haiku (description synthesis/extraction)
           │
-          │  reads via features_with_feedback view; Next.js data cache (TTL 300s)
+          │  reads via features_with_feedback view
           ▼
 Next.js API Routes → React server components + Leaflet
 ```
@@ -47,7 +47,6 @@ All four sources run in **parallel** (`Promise.all`):
 5. Records upserted by deterministic `id` (`capital-project-{OBJECTID}`, `bike-lane-{slug}`, etc.).
 6. Stale records deleted: `DELETE WHERE source_type = X AND synced_at < <run_start>`. This avoids sending thousands of IDs through a NOT IN filter.
 7. Each source logged to `sync_log`.
-8. On any success, invalidates the Next.js `"features"` cache tag via `revalidateTag("features")`.
 
 ## Bike Lane Segment Merging
 
@@ -60,7 +59,7 @@ ArcGIS stores one row per physical block. `fetchBikeLanes()` groups by `Project`
 
 ## Enrichment Flow
 
-`GET /api/enrich` fills `description` for records where it is null or empty. Processes in batches of 10 concurrently. Controlled by `ENRICH_LIMIT` env var (default 10, `-1` = unlimited). Filter with `?source_type=` and `?limit=`.
+`GET /api/enrich` fills `description` for records where it is null or empty. Controlled by `ENRICH_LIMIT` env var (default 10, `-1` = unlimited). Filter with `?source_type=` and `?limit=`.
 
 | source_type | Approach |
 |---|---|
@@ -70,17 +69,15 @@ ArcGIS stores one row per physical block. `fetchBikeLanes()` groups by `Project`
 
 Model: `claude-haiku-4-5-20251001` via `@ai-sdk/anthropic` + `generateText`. Use `maxOutputTokens`, not `maxTokens`.
 
-## Read Path & Caching
+## Read Path
 
-Frontend calls these API routes (never Supabase directly):
+Frontend calls API routes (never Supabase directly):
 
 - `GET /api/features` — filtered list, paginated 1000 rows
 - `GET /api/features/:id` — single feature with feedback aggregates
 - `GET /api/features.geojson` — GeoJSON FeatureCollection for map
 
-`getFeatures()` in `src/lib/features.ts` wraps the DB query in `unstable_cache` (Next.js data cache, TTL 300s, tag `"features"`). Cache is invalidated by `revalidateTag("features")` at the end of each successful sync.
-
-Single-record lookups (`getFeature()`) always hit the DB directly — no caching.
+`getFeatures()` in `src/lib/features.ts` reads from the `features_with_feedback` Supabase view; falls back to `src/lib/sample-data.ts` when Supabase is unconfigured.
 
 ## Status Normalization
 
