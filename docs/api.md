@@ -98,14 +98,16 @@ Returns a GeoJSON `FeatureCollection` for the map.
 }
 ```
 
-## `POST /api/sync`
+## `GET /api/sync` or `POST /api/sync`
 
-Triggers ArcGIS-to-Supabase sync. Protected by `SYNC_SECRET`.
+Triggers ArcGIS-to-Supabase sync. Protected by `SYNC_SECRET` or `CRON_SECRET`.
+
+Accepts optional `?label_limit=N` to cap how many bike lane labels Claude cleans (overrides `LABEL_CLEAN_LIMIT` env var only if lower).
 
 ### Request
 
 ```http
-POST /api/sync
+GET /api/sync
 Authorization: Bearer <SYNC_SECRET>
 ```
 
@@ -115,12 +117,36 @@ Authorization: Bearer <SYNC_SECRET>
 {
   "ok": true,
   "sources": [
-    {
-      "source_type": "capital_project",
-      "status": "success",
-      "records_seen": 100,
-      "records_upserted": 100
-    }
+    { "source_type": "capital_project", "status": "success", "records_seen": 100, "records_upserted": 100 },
+    { "source_type": "bike_lane",       "status": "success", "records_seen": 82,  "records_upserted": 82 },
+    { "source_type": "trail_project",   "status": "success", "records_seen": 214, "records_upserted": 214 },
+    { "source_type": "art_installation","status": "success", "records_seen": 540, "records_upserted": 540 }
+  ]
+}
+```
+
+## `GET /api/enrich` or `POST /api/enrich`
+
+Fills null `description` fields using Claude Haiku. Protected by `SYNC_SECRET` or `CRON_SECRET`. Requires `ANTHROPIC_API_KEY`.
+
+### Query Parameters
+
+| Parameter | Example | Notes |
+| --- | --- | --- |
+| `source_type` | `capital_project` | Filter to one type (`bike_lane`, `capital_project`, `trail_project`) |
+| `limit` | `10` | Cap records processed; overrides `ENRICH_LIMIT` env only if lower |
+
+### Response
+
+```json
+{
+  "ok": true,
+  "records_seen": 5,
+  "records_seen_by_type": { "capital_project": 3, "trail_project": 2 },
+  "records_updated": 4,
+  "results": [
+    { "id": "capital-project-123", "updated": true, "description": "..." },
+    { "id": "trail-existing-456",  "updated": false, "description": null, "error": "fetch_failed" }
   ]
 }
 ```
