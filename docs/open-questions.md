@@ -1,25 +1,23 @@
 # Open Questions
 
+Genuinely undecided questions. Resolved decisions are documented in `architecture.md` and `data-model.md`.
+
 ## Data
 
-- What is the correct public source for art installations?
-- Which Capital Projects fields should map to name, description, ward, cost, timeline, and official URL?
-- Which Trails fields should map to name, status, ward, and timeline?
-- Are there project pages or DDOT references that should be linked from each feature?
-- Should ward be derived from geometry when the upstream value is missing?
+- Should `ward` be derived from geometry (PostGIS point-in-polygon) when the upstream value is missing? Bike lanes currently have no ward at all.
+- Capital project descriptions are LLM-synthesized from structured fields. Is the quality acceptable, or should we invest in scraping `ddot.dc.gov/search`? The PTP layer's own `Description` field is nearly always empty or just a location name.
+- Art installations (MapServer/18) have `TITLE`, `ARTIST`, `MEDIUM`, `LOCATION`, `URL`, `YEARINSTALLED` — descriptions are auto-formatted from these. Is the auto-format good enough or should enrich run LLM synthesis on these too?
 
 ## Product
 
-- Should public users see raw comments, aggregate support only, or selected moderated comments?
-- Should negative feedback be displayed publicly or only included in DDOT exports?
-- Is email collection acceptable for launch, and what privacy language is needed?
-- Should feedback support be binary, a thumbs-up only, or a richer sentiment field?
-- What is the first DDOT-facing export: CSV, dashboard, or recurring email digest?
+- Should public users see raw feedback comments, aggregate support counts only, or selected/moderated comments?
+- Should negative feedback (support=false) be shown publicly, or only surfaced in DDOT exports?
+- Is email collection acceptable for launch? If so, what privacy language is required?
+- What is the first DDOT-facing export: CSV download, admin dashboard, or recurring email digest?
 
 ## Technical
 
-- Leaflet or MapLibre GL?
-- Should geometry stay as plain GeoJSON jsonb, or should the app use PostGIS?
-- Should the MVP implement rate limiting before public launch?
-- Should ArcGIS sync delete missing records, mark them inactive, or leave them untouched?
-- How should partial sync failures be reported to maintainers?
+- Should geometry move from plain GeoJSON jsonb to PostGIS? Unlocks spatial queries (ward derivation, bbox filter). Current `bbox` filter param is not implemented.
+- Rate limiting on `/api/features/:id/feedback` before public launch?
+- How should sync failures surface to the operator? Currently only visible in `sync_log` — no alerting.
+- `raw._segments` on bike lanes prevents stripping `raw` from list queries. Promote `_segments` to its own column to allow selective projection and reduce list payload size?
