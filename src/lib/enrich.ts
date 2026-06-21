@@ -42,6 +42,51 @@ Write a clear 2-3 sentence description of this project — what it is, where it 
   return trimmed === "null" || trimmed.toLowerCase().startsWith("null") ? null : trimmed;
 }
 
+const LABEL_BATCH_SIZE = 50;
+
+async function cleanLabelBatch(labels: string[]): Promise<Map<string, string>> {
+  const { text } = await generateText({
+    model: anthropic("claude-haiku-4-5-20251001"),
+    prompt: `Convert these DC bike lane segment labels from ALL CAPS ArcGIS format to clean, human-readable title case.
+
+Rules:
+- Street type abbreviations: St, Ave, Rd, Blvd, Dr, Pl, Ln, Ct, Ter
+- Directional quadrant suffixes always uppercase: NW, NE, SE, SW
+- Ordinals lowercase: 1st, 2nd, 3rd, 4th, 11th, etc.
+- Use lowercase "to" between cross streets
+- Keep the "Street Name: From St to To St" colon format intact
+- Preserve bare block-number ranges like "6 to 7" as-is
+- Do not add or remove any streets or change route names
+
+Return ONLY a valid JSON object with no markdown fences, mapping each original label to its cleaned version:
+{"ORIGINAL LABEL": "Cleaned label"}
+
+Labels to clean (one per line):
+${labels.join("\n")}`,
+    maxOutputTokens: 2000,
+  });
+
+  const stripped = text.trim().replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
+  const parsed = JSON.parse(stripped) as Record<string, string>;
+  return new Map(Object.entries(parsed));
+}
+
+export async function cleanSegmentLabels(labels: string[]): Promise<Map<string, string>> {
+  const unique = [...new Set(labels.filter(Boolean))];
+  if (!unique.length || !process.env.ANTHROPIC_API_KEY) return new Map();
+
+  const result = new Map<string, string>();
+  for (let i = 0; i < unique.length; i += LABEL_BATCH_SIZE) {
+    try {
+      const cleaned = await cleanLabelBatch(unique.slice(i, i + LABEL_BATCH_SIZE));
+      for (const [orig, clean] of cleaned) result.set(orig, clean);
+    } catch {
+      // partial success is fine; originals used for failed batches
+    }
+  }
+  return result;
+}
+
 // Search DDOT's website for a capital project by name, return the first result URL.
 async function findDdotProjectUrl(projectName: string): Promise<string | null> {
   const query = encodeURIComponent(projectName);
@@ -49,8 +94,6 @@ async function findDdotProjectUrl(projectName: string): Promise<string | null> {
   const pageText = await fetchPageText(searchUrl);
   if (!pageText) return null;
 
-  // Look for a project page path in the stripped text — DDOT project pages follow /node/<id>
-  // or /page/<slug> patterns. Extract the first href that looks like a project page.
   const match = pageText.match(/\/page\/[a-z0-9-]{4,}|\/node\/\d+/);
   if (!match) return null;
 
@@ -85,12 +128,10 @@ export async function enrichRecord(record: {
     }
 
     if (record.source_type === "capital_project") {
-      // If the sync already captured a non-trivial description, leave it.
       if (record.description && record.description.length > 60 && record.description !== record.name) {
         return { id: record.id, updated: false, description: record.description };
       }
 
-      // Try official_url first; fall back to DDOT search.
       const url = record.official_url ?? (await findDdotProjectUrl(record.name));
       if (!url) {
         return { id: record.id, updated: false, description: null, error: "no_url_found" };
@@ -114,3 +155,4 @@ export async function enrichRecord(record: {
     };
   }
 }
+

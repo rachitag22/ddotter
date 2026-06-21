@@ -1,5 +1,5 @@
 import type { FeatureRecord, Geometry, ProjectStatus, SourceType } from "@/lib/types";
-import { cleanSegmentLabels } from "@/lib/clean-labels";
+import { cleanSegmentLabels } from "@/lib/enrich";
 
 type ArcGisFeature = {
   geometry: Geometry | null;
