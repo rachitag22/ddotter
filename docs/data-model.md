@@ -21,6 +21,9 @@ Canonical record for every project, trail, and art installation.
 | `geometry` | jsonb not null | GeoJSON geometry (Point, LineString, or MultiLineString) |
 | `raw` | jsonb not null | Full upstream ArcGIS attributes. Bike lanes store `_segments: [{facility, label, coordinates}]` here — used by the SegmentList component. |
 | `synced_at` | timestamptz not null | Set to `now()` on each upsert; used to detect and delete stale records |
+| `last_enrichment_attempted_at` | timestamptz nullable | Set whenever `/api/enrich` tries to enrich this record |
+| `last_enriched_at` | timestamptz nullable | Set when `/api/enrich` successfully writes a generated description |
+| `enrichment_error` | text nullable | Last enrichment failure reason, if any |
 
 ### Constraints (applied)
 
@@ -38,6 +41,7 @@ features_status_idx       on (status)
 features_ward_idx         on (ward)
 features_synced_at_idx    on (synced_at desc)
 features_raw_gin_idx      using gin (raw)
+features_last_enrichment_attempted_at_idx on (last_enrichment_attempted_at) where last_enrichment_attempted_at is null
 
 -- composite (common filter combinations)
 features_type_status_idx  on (source_type, status)

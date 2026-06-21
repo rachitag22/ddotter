@@ -59,7 +59,7 @@ ArcGIS stores one row per physical block. `fetchBikeLanes()` groups by `Project`
 
 ## Enrichment Flow
 
-`GET /api/enrich` fills `description` for records where it is null or empty. Controlled by `ENRICH_LIMIT` env var (default 10, `-1` = unlimited). Filter with `?source_type=` and `?limit=`.
+`GET /api/enrich` fills or replaces `description` for records where `last_enrichment_attempted_at` is null. It sets `last_enrichment_attempted_at` on every attempt, sets `last_enriched_at` when a description is written, and stores the last failure in `enrichment_error`. Controlled by `ENRICH_LIMIT` env var (default 10, `-1` = unlimited). Filter with `?source_type=` and `?limit=`; use `?force=true` to retry already-attempted records.
 
 | source_type | Approach |
 |---|---|

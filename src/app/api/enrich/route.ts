@@ -21,6 +21,8 @@ async function handleEnrich(request: Request) {
 
   const url = new URL(request.url);
   const sourceTypeFilter = url.searchParams.get("source_type");
+  const idFilter = url.searchParams.get("id");
+  const force = url.searchParams.get("force") === "true";
   // ENRICH_LIMIT: unset = 10 (safe default), -1 = unlimited
   const envLimit = process.env.ENRICH_LIMIT != null ? parseInt(process.env.ENRICH_LIMIT, 10) : 10;
   const queryLimitParam = url.searchParams.get("limit");
@@ -40,12 +42,20 @@ async function handleEnrich(request: Request) {
 
   const supabase = getSupabaseSyncClient();
 
-  const { data: records, error } = await supabase
+  let query = supabase
     .from("features")
-    .select("id, name, source_type, official_url, description, ward, mode, status, timeline_start, timeline_end, cost, raw")
+    .select("id, name, source_type, official_url, description, ward, mode, status, timeline_start, timeline_end, cost, raw, last_enrichment_attempted_at")
     .in("source_type", targetTypes)
-    .or("description.is.null,description.eq.")
     .order("source_type");
+
+  if (!force) {
+    query = query.is("last_enrichment_attempted_at", null);
+  }
+  if (idFilter) {
+    query = query.eq("id", idFilter);
+  }
+
+  const { data: records, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -67,9 +77,16 @@ async function handleEnrich(request: Request) {
     const toUpdate = batchResults.filter((r) => r.updated && r.description);
     updated += toUpdate.length;
     await Promise.all(
-      toUpdate.map((r) =>
-        supabase.from("features").update({ description: r.description }).eq("id", r.id),
-      ),
+      batchResults.map((r) => {
+        const now = new Date().toISOString();
+        const patch = {
+          last_enrichment_attempted_at: now,
+          last_enriched_at: r.updated && r.description ? now : null,
+          enrichment_error: r.error ?? null,
+          ...(r.updated && r.description ? { description: r.description } : {}),
+        };
+        return supabase.from("features").update(patch).eq("id", r.id);
+      }),
     );
   }
 
@@ -78,6 +95,8 @@ async function handleEnrich(request: Request) {
     records_seen: allRecords.length,
     records_seen_by_type: byType,
     records_updated: updated,
+    force,
+    id: idFilter,
     results,
   });
 }

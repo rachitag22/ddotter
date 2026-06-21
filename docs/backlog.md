@@ -6,7 +6,7 @@ Known issues, improvement opportunities, and things to revisit. Add new items fr
 
 - **Bike lane ward is always null** — the DDOT BikeLane ArcGIS source doesn't include a ward field. Ward would need to be derived from geometry (PostGIS point-in-polygon against a ward boundary layer) or cross-referenced against another source.
 - **Bike lane descriptions only enrichable if `official_url` exists** — `/api/enrich` scrapes the project URL; lanes without one are skipped and stay description-null indefinitely.
-- **Enrichment doesn't retry failed records** — if a URL fetch times out, that record keeps a null description. Re-running `/api/enrich` will retry it, but there's no automatic retry or backoff.
+- **Enrichment retries are manual** — `/api/enrich` skips records with `last_enrichment_attempted_at` unless called with `force=true`. There is no automatic retry or backoff.
 - **No alerting on sync failures** — failures are logged to `sync_log` but nothing notifies maintainers. You have to check the table or the sync response manually.
 
 ## LLM / API Limits
