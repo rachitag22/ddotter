@@ -4,9 +4,7 @@ import dynamic from "next/dynamic";
 import { APIProvider } from "@vis.gl/react-google-maps";
 import type { ProjectFilters, ProjectRecord } from "@/lib/types";
 
-// Demo key — swap for NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in production
-const GOOGLE_MAPS_KEY =
-  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFmBad";
+const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
 const MapView = dynamic<{ features: ProjectRecord[]; filters?: ProjectFilters; selectedId?: string }>(
   () => import("@/components/MapView").then((m) => ({ default: m.MapView })),
