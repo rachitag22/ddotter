@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ddotter",
+      "runtimeExecutable": "/Users/rachitagarwal/Documents/projects/ddotter/node_modules/.bin/next",
+      "runtimeArgs": ["dev", "--cwd", "/Users/rachitagarwal/Documents/projects/ddotter"],
+      "port": 3000,
+      "autoPort": false
+    }
+  ]
+}
