@@ -77,6 +77,7 @@ body {
   color: var(--text);
   font-family: Arial, Helvetica, sans-serif;
   margin: 0;
+  overscroll-behavior: none;
 }
 
 a {
@@ -115,6 +116,7 @@ button:disabled {
   height: 100dvh;
   overflow: hidden;  /* contains fixed children; detail page has no .app wrapper */
   position: relative;
+  touch-action: none;
 }
 
 /* Placeholder shown while the Leaflet bundle loads */
@@ -132,6 +134,8 @@ button:disabled {
   right: 0;
   top: 0;
   left: 0;
+  overscroll-behavior: contain;
+  touch-action: none;
   z-index: var(--z-map);
 }
 
@@ -203,6 +207,7 @@ button:disabled {
   /* Default: peek — only the handle (72 px) is above the fold */
   transform: translateY(calc(85dvh - 72px));
   transition: transform var(--ease-drawer);
+  touch-action: pan-y;
   will-change: transform;
   z-index: var(--z-drawer);
 }
