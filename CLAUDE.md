@@ -82,10 +82,31 @@ All filter state lives in URL search params. `MapView` reads `useSearchParams()`
 
 ## Supabase
 
-- **`features_with_feedback`** view — what the frontend reads; joins `features` + aggregated feedback counts
+- **`projects_with_feedback`** view — what the frontend reads; joins `projects` + aggregated feedback counts
+- **`bike_network`** table — purpose-built for bike lanes + trails with proper `facility_type` and `status` enums (see below)
 - **`sync_log`** table — one row per source per sync run, records `records_seen`, `records_upserted`, `status`, `error_message`
 - RLS is enabled; sync writes go through `getSupabaseSyncClient()` which attaches `x-sync-secret` header, verified by `private.sync_request_authorized()` (SHA-256 check against `private.sync_secrets`)
-- Stale records are deleted after each successful upsert: `DELETE WHERE source_type = X AND synced_at < <run_start>`
+- Stale records are deleted after each successful upsert: `DELETE WHERE source = X AND synced_at < <run_start>`
+
+### `bike_network` table
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | text PK | `bike-inv-{OBJECTID}`, `bike-proj-{ObjectID}`, `trail-{OBJECTID}`, `planned-trail-{OBJECTID}` |
+| `source` | text | `bike_lane_inventory` · `bike_lane_project` · `bike_trail` · `planned_trail` |
+| `facility_type` | text | `protected` · `dual_protected` · `buffered` · `dual_buffered` · `conventional` · `contraflow` · `sharrow` · `shared_path` · `trail` · `unknown` |
+| `status` | text | `existing` · `planned` · `under_construction` · `future` · `complete` · `unknown` |
+| `ward` | text | |
+| `length_m` | numeric | meters |
+| `geometry` | jsonb | GeoJSON LineString or MultiLineString |
+| `raw` | jsonb | original ArcGIS attributes |
+
+Synced via `/api/sync-bike-network`. Trigger manually:
+```bash
+curl -X GET "https://ddotter.vercel.app/api/sync-bike-network" -H "Authorization: Bearer <SYNC_SECRET>"
+# Run a single source:
+curl -X GET "https://ddotter.vercel.app/api/sync-bike-network?only=bike_lane_inventory" -H "Authorization: Bearer <SYNC_SECRET>"
+```
 
 ### Migrations (in order)
 
@@ -93,6 +114,7 @@ All filter state lives in URL search params. `MapView` reads `useSearchParams()`
 2. `202606190002_public_mvp_access.sql` — RLS policies for public reads
 3. `202606190003_sync_sources.sql` — adds `bike_lane` source type; `private.sync_secrets` table; `private.sync_request_authorized()` function; RLS for sync writes
 4. `20260620222100_allow_sync_delete_stale_features.sql` — grants DELETE to anon for stale-record cleanup
+5. `20260622002000_bike_network.sql` — `bike_network` table with facility_type + status enums, RLS, indexes
 
 ## Environment variables
 

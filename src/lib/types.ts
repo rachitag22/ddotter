@@ -53,6 +53,46 @@ export type ProjectAsset = {
   scraped_at: string;
 };
 
+// ─── Bike network ────────────────────────────────────────────────────────────
+
+export type BikeNetworkSource =
+  | "bike_lane_inventory"
+  | "bike_trail"
+  | "planned_trail";
+
+export type FacilityType =
+  | "protected"
+  | "dual_protected"
+  | "buffered"
+  | "dual_buffered"
+  | "conventional"
+  | "contraflow"
+  | "sharrow"
+  | "shared_path"
+  | "trail"
+  | "unknown";
+
+export type BikeNetworkStatus =
+  | "existing"
+  | "planned"
+  | "under_construction"
+  | "future"
+  | "complete"
+  | "unknown";
+
+export type BikeSegment = {
+  id: string;
+  source: BikeNetworkSource;
+  name: string;
+  facility_type: FacilityType;
+  status: BikeNetworkStatus;
+  ward: string | null;
+  length_m: number | null;
+  geometry: Geometry;
+  raw: Record<string, unknown>;
+  synced_at: string;
+};
+
 export type FeedbackPayload = {
   support: boolean;
   comment: string;

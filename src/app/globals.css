@@ -11,6 +11,13 @@
   --gold:   #b26a00;
   --blue:   #2767b1;
   --red:    #b42318;
+  --teal:   #0891b2;
+  --cyan:   #06b6d4;
+  --purple: #7c3aed;
+  --orange: #c2410c;
+  --mint:   #1db87a;
+  --gray:   #9ca3af;
+  --white:  #ffffff;
   --text:   #17211d;
   --muted:  #5c6862;
   --line:   #dfe6e1;
@@ -22,6 +29,8 @@
   --gold-tint:    #fff3df;
   --blue-tint:    #e6f3ff;
   --neutral-tint: #edf3ef;
+  --map-loading-start: #dce9e2;
+  --map-loading-end:   #f0eedf;
 
   /* Border radius scale */
   --r-xs:   4px;
@@ -44,6 +53,7 @@
   /* Shadows */
   --shadow-sm:     0 1px 4px rgb(0 0 0 / 8%);
   --shadow-drawer: 0 -4px 32px rgb(0 0 0 / 14%);
+  --shadow-sidebar: 2px 0 20px rgb(0 0 0 / 10%);
 
   /* Z-index layers */
   --z-map:    0;
@@ -109,7 +119,7 @@ button:disabled {
 
 /* Placeholder shown while the Leaflet bundle loads */
 .map-loading {
-  background: linear-gradient(135deg, #dce9e2, #f0eedf);
+  background: linear-gradient(135deg, var(--map-loading-start), var(--map-loading-end));
   inset: 0;
   position: fixed;
   z-index: var(--z-map);
@@ -123,6 +133,56 @@ button:disabled {
   top: 0;
   left: 0;
   z-index: var(--z-map);
+}
+
+.map-test-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.map-test-header {
+  background: var(--text);
+  color: var(--panel);
+  font-size: var(--t-sm);
+  padding: 12px 16px;
+}
+
+.map-test-canvas {
+  flex: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Map layer controls (bike network toggle, etc.)
+   ───────────────────────────────────────────────────────────────────────── */
+
+.network-toggle {
+  background: var(--panel);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+  padding: 8px 12px;
+  position: fixed;
+  right: 12px;
+  top: 12px;
+  z-index: 5;
+}
+
+.network-toggle-label {
+  align-items: center;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  font-size: var(--t-sm);
+  font-weight: 500;
+  gap: 8px;
+  user-select: none;
+}
+
+.network-toggle-label input[type="checkbox"] {
+  accent-color: var(--green);
+  cursor: pointer;
+  height: 15px;
+  width: 15px;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -236,7 +296,7 @@ button:disabled {
   /* Sidebar: replace the bottom drawer with a fixed left panel */
   .drawer {
     border-radius: 0;
-    box-shadow: 2px 0 20px rgb(0 0 0 / 10%);
+    box-shadow: var(--shadow-sidebar);
     height: 100dvh;
     right: auto;
     top: 0;
@@ -332,26 +392,6 @@ button:disabled {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Map segment tooltips (facility-type labels on bike lane segments)
-   ───────────────────────────────────────────────────────────────────────── */
-
-.seg-tooltip {
-  background: rgba(23, 33, 29, 0.82);
-  border: none;
-  border-radius: var(--r-pill);
-  box-shadow: none;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  padding: 2px 8px;
-  white-space: nowrap;
-}
-
-.seg-tooltip::before {
-  display: none;
-}
-
 /* ─────────────────────────────────────────────────────────────────────────
    Segment breakdown (bike lanes with mixed facility types)
    ───────────────────────────────────────────────────────────────────────── */
@@ -710,52 +750,11 @@ button:disabled {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Leaflet overrides
+   Google Maps overrides
    ───────────────────────────────────────────────────────────────────────── */
 
-.leaflet-container {
-  font-family: inherit;
-}
-
-/* Shorten zoom animation from Leaflet's default 0.25 s so the CSS-scaled
-   frame (the source of perceived blur) is visible for less time. */
-.leaflet-zoom-anim .leaflet-zoom-animated {
-  transition-duration: 0.15s;
-}
-
-.leaflet-popup-content-wrapper {
-  border-radius: var(--r-md) !important;
-  box-shadow: var(--shadow-drawer) !important;
-  padding: 0 !important;
-}
-
-.leaflet-popup-content {
-  margin: 0 !important;
-  width: auto !important;
-}
-
-.map-popup {
-  display: grid;
-  gap: 8px;
-  padding: 14px 16px;
-}
-
-.map-popup-name {
-  color: var(--text);
-  font-size: var(--t-sm);
-  font-weight: 600;
-  line-height: 1.35;
-  margin: 0;
-}
-
-.map-popup-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.map-popup-link {
-  color: var(--green);
-  font-size: var(--t-sm);
-  font-weight: 500;
+/* Push Google's logo / attribution out of the way of the bottom drawer */
+.gm-style .gmnoprint,
+.gm-style .gm-bundled-control {
+  bottom: 24px !important;
 }

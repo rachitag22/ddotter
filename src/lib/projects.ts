@@ -6,7 +6,7 @@ import type { ProjectAsset, ProjectFilters, ProjectRecord } from "@/lib/types";
 function matchesFilters(project: ProjectRecord, filters: ProjectFilters) {
   if (filters.type) {
     if (project.source_type !== filters.type) return false;
-  } else if (project.source_type === "art_installation") {
+  } else if (project.source_type !== "bike_lane" && project.source_type !== "trail_project") {
     return false;
   }
   if (filters.ward && project.ward !== filters.ward) return false;
@@ -48,7 +48,7 @@ async function fetchProjects(filters: ProjectFilters): Promise<ProjectRecord[]> 
     if (filters.type) {
       query = query.eq("source_type", filters.type);
     } else {
-      query = query.neq("source_type", "art_installation");
+      query = query.in("source_type", ["bike_lane", "trail_project"]);
     }
     if (filters.ward) query = query.eq("ward", filters.ward);
     if (filters.status) {
