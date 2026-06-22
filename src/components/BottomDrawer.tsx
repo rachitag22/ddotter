@@ -229,8 +229,9 @@ export function BottomDrawer({
         ) : (
           <div className="project-list">
             {features.map((project) => (
-              <article
+              <Link
                 className={`project-card${selectedId === project.id ? " selected" : ""}`}
+                href={buildSelectedUrl(project.id)}
                 key={project.id}
               >
                 <div className="meta">
@@ -244,10 +245,7 @@ export function BottomDrawer({
                 </div>
                 <h2>{project.name}</h2>
                 {project.description && <p className="card-desc">{project.description}</p>}
-                <Link className="link-button" href={buildSelectedUrl(project.id)}>
-                  View project →
-                </Link>
-              </article>
+              </Link>
             ))}
             {features.length === 0 && (
               <p className="empty-state">No projects match your filters.</p>

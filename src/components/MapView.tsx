@@ -62,7 +62,7 @@ function GmPolyline({
       zIndex,
       map,
     });
-    listenerRef.current = polylineRef.current.addListener("click", onClick);
+    listenerRef.current = polylineRef.current.addListener("click", (e: google.maps.MapMouseEvent) => { e.stop(); onClick(); });
     return () => {
       listenerRef.current?.remove();
       polylineRef.current?.setMap(null);
@@ -79,11 +79,11 @@ function GmPolyline({
     polylineRef.current?.setPath(path);
   }, [path]);
 
-  // Update click handler
+  // Update click handler — e.stop() prevents the event from also firing the map's onClick (which deselects)
   useEffect(() => {
     listenerRef.current?.remove();
     if (polylineRef.current) {
-      listenerRef.current = polylineRef.current.addListener("click", onClick);
+      listenerRef.current = polylineRef.current.addListener("click", (e: google.maps.MapMouseEvent) => { e.stop(); onClick(); });
     }
   }, [onClick]);
 
