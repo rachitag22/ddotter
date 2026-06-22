@@ -110,8 +110,6 @@ export function toGeoJson(projects: ProjectRecord[]) {
         status: project.status,
         ward: project.ward,
         mode: project.mode,
-        feedback_count: project.feedback_count ?? 0,
-        support_percent: project.support_percent ?? 0,
       },
     })),
   };

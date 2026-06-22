@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip } from "react-leaflet";
+import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { sourceTypeColor } from "@/lib/design";
 import type { ProjectRecord } from "@/lib/types";
@@ -34,6 +35,51 @@ function getSegments(raw: Record<string, unknown>): RawSeg[] | null {
   return s as RawSeg[];
 }
 
+function coordBounds(coords: [number, number][]): [[number, number], [number, number]] {
+  let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+  for (const [lng, lat] of coords) {
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+  }
+  return [[minLat, minLng], [maxLat, maxLng]];
+}
+
+function MapController({ features, selectedId }: { features: ProjectRecord[]; selectedId?: string }) {
+  const map = useMap();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const project = features.find((f) => f.id === selectedId);
+    if (!project) return;
+    const { geometry } = project;
+
+    if (geometry.type === "Point") {
+      const [lng, lat] = geometry.coordinates;
+      map.flyTo([lat, lng], Math.max(map.getZoom(), 14), { duration: 0.8 });
+    } else if (geometry.type === "LineString") {
+      map.flyToBounds(coordBounds(geometry.coordinates), { padding: [60, 60], duration: 0.8 });
+    } else if (geometry.type === "MultiLineString") {
+      map.flyToBounds(coordBounds(geometry.coordinates.flat()), { padding: [60, 60], duration: 0.8 });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
+  useMapEvents({
+    click() {
+      if (!selectedId) return;
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("selected");
+      router.push(`/?${params.toString()}`);
+    },
+  });
+
+  return null;
+}
+
 export function MapView({
   features,
   selectedId,
@@ -60,6 +106,7 @@ export function MapView({
         updateWhenZooming={false}
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+      <MapController features={features} selectedId={selectedId} />
       {features.flatMap((project) => {
         const isSelected = project.id === selectedId;
         const fill = sourceTypeColor[project.source_type] ?? sourceTypeColor.capital_project;

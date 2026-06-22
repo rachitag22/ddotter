@@ -18,9 +18,6 @@ export const sampleProjects: ProjectRecord[] = [
     geometry: { type: "Point", coordinates: [-76.9959, 38.9128] },
     raw: { demo: true },
     synced_at: new Date().toISOString(),
-    feedback_count: 47,
-    support_count: 43,
-    support_percent: 91,
   },
   {
     id: "trail-project-2204",
@@ -46,9 +43,6 @@ export const sampleProjects: ProjectRecord[] = [
     },
     raw: { demo: true },
     synced_at: new Date().toISOString(),
-    feedback_count: 82,
-    support_count: 77,
-    support_percent: 94,
   },
   {
     id: "art-installation-301",
@@ -67,8 +61,5 @@ export const sampleProjects: ProjectRecord[] = [
     geometry: { type: "Point", coordinates: [-77.032, 38.917] },
     raw: { demo: true },
     synced_at: new Date().toISOString(),
-    feedback_count: 18,
-    support_count: 16,
-    support_percent: 89,
   },
 ];
