@@ -8,7 +8,8 @@ function classifyAsset(url: string, title: string | null): { asset_type: AssetTy
   if (/\.(pdf)(\?|#|$)/.test(lower)) return { asset_type: "document", file_type: "pdf" };
   if (/\.(pptx?|odp)(\?|#|$)/.test(lower)) return { asset_type: "document", file_type: "presentation" };
   if (/\.(docx?|odt)(\?|#|$)/.test(lower)) return { asset_type: "document", file_type: "document" };
-  if (/youtube\.com|youtu\.be|vimeo\.com/.test(lower)) return { asset_type: "video", file_type: null };
+  // Only specific videos, not channel/playlist pages
+  if (/youtube\.com\/watch\?|youtu\.be\/[a-z0-9_-]+|vimeo\.com\/\d+/i.test(lower)) return { asset_type: "video", file_type: null };
   if (/\.(jpe?g|png|gif|webp|svg)(\?|#|$)/.test(lower)) return { asset_type: "photo", file_type: null };
   if (/remix\.com|arcgis\.com\/apps\/(webappviewer|mapviewer|instant|dashboards)/i.test(lower)) {
     return { asset_type: "map", file_type: null };
