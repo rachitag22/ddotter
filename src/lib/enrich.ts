@@ -1,6 +1,32 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
 
+function decodeHtml(value: string) {
+  return value
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">");
+}
+
+function extractMetaText(html: string) {
+  const values = new Set<string>();
+  for (const match of html.matchAll(/<meta\s+[^>]*>/gi)) {
+    const tag = match[0];
+    const key = tag.match(/\b(?:name|property)=["']([^"']+)["']/i)?.[1]?.toLowerCase();
+    const content = tag.match(/\bcontent=["']([^"']*)["']/i)?.[1];
+    if (
+      content &&
+      key &&
+      ["description", "og:description", "twitter:description", "og:title", "twitter:title"].includes(key)
+    ) {
+      values.add(decodeHtml(content));
+    }
+  }
+  return [...values].join(". ");
+}
+
 export async function fetchPageText(url: string): Promise<string | null> {
   try {
     const res = await fetch(url, {
@@ -9,13 +35,14 @@ export async function fetchPageText(url: string): Promise<string | null> {
     });
     if (!res.ok) return null;
     const html = await res.text();
-    return html
+    const metaText = extractMetaText(html);
+    const bodyText = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
       .replace(/<[^>]+>/g, " ")
       .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 6000);
+      .trim();
+    return [metaText, bodyText].filter(Boolean).join("\n").slice(0, 6000);
   } catch {
     return null;
   }
@@ -24,17 +51,22 @@ export async function fetchPageText(url: string): Promise<string | null> {
 export async function extractDescriptionWithLLM(
   pageText: string,
   projectName: string,
+  knownDetails: string[] = [],
 ): Promise<string | null> {
+  const details = knownDetails.filter(Boolean).join("\n");
   const { text } = await generateText({
     model: anthropic("claude-haiku-4-5-20251001"),
     prompt: `You are extracting project descriptions for a DC transportation advocacy map.
 
 Project name: "${projectName}"
 
+Known details:
+${details || "None"}
+
 Page text (may contain nav, footers, etc):
 ${pageText}
 
-Write a clear 2-3 sentence description of this project — what it is, where it is, and what it will accomplish. Use plain language. If no project-relevant content exists in the text, respond with exactly: null`,
+Write a clear 2-3 sentence description of this project — what it is, where it is, and what it will accomplish. Use plain language. Use the known details when the page text is sparse. If no project-relevant content exists in either the known details or page text, respond with exactly: null`,
     maxOutputTokens: 300,
   });
 
@@ -145,14 +177,29 @@ export async function enrichRecord(record: EnrichableRecord): Promise<EnrichResu
   try {
     if (record.source_type === "bike_lane") {
       if (!record.official_url) {
-        return { id: record.id, updated: false, description: record.description };
+        return { id: record.id, updated: false, description: record.description, error: "missing_official_url" };
       }
       const pageText = await fetchPageText(record.official_url);
       if (!pageText) {
         return { id: record.id, updated: false, description: null, error: "fetch_failed" };
       }
-      const description = await extractDescriptionWithLLM(pageText, record.name);
-      return { id: record.id, updated: description !== null, description };
+      const raw = record.raw ?? {};
+      const details = [
+        record.mode ? `Facility: ${record.mode}` : null,
+        record.status ? `Status: ${record.status}` : null,
+        record.timeline_start ? `Start: ${record.timeline_start}` : null,
+        record.timeline_end ? `End: ${record.timeline_end}` : null,
+        asStr(raw.Description) ? `Source description: ${asStr(raw.Description)}` : null,
+        asStr(raw.ProjectWorkStatus) ? `Project work status: ${asStr(raw.ProjectWorkStatus)}` : null,
+        asStr(raw.ProjectSelectionCategory) ? `Selection category: ${asStr(raw.ProjectSelectionCategory)}` : null,
+      ].filter((s): s is string => s !== null);
+      const description = await extractDescriptionWithLLM(pageText, record.name, details);
+      return {
+        id: record.id,
+        updated: description !== null,
+        description,
+        error: description === null ? "no_description_extracted" : undefined,
+      };
     }
 
     if (record.source_type === "capital_project") {

@@ -27,7 +27,7 @@ const EXISTING_BIKE_TRAILS_URL =
 const PLANNED_MULTI_USE_TRAILS_URL =
   "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Transportation_Bikes_Trails_WebMercator/MapServer/1/query";
 const PUBLIC_ART_URL =
-  "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Cultural_and_Society_WebMercator/MapServer/18/query";
+  "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Cultural_and_Society_WebMercator/MapServer/55/query";
 
 function asString(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
@@ -46,6 +46,20 @@ function asNumber(value: unknown) {
 function asDate(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
   return new Date(value).toISOString().slice(0, 10);
+}
+
+function pick(raw: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    if (raw[key] !== null && raw[key] !== undefined && raw[key] !== "") return raw[key];
+  }
+  return null;
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 function normalizeStatus(value: unknown): ProjectStatus {
@@ -112,10 +126,7 @@ function normalizeBikeLane(feature: ArcGisFeature): FeatureRecord | null {
   // Use a slug of the project name as the stable ID so that all segments
   // of the same project (which share the same Project field) upsert into
   // one record after merging. Fall back to objectId for unnamed segments.
-  const slug = (project?.trim() || routeName || objectId)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+  const slug = slugify(project?.trim() || routeName || objectId);
 
   return {
     id: `bike-lane-${slug}`,
@@ -201,17 +212,18 @@ function normalizePlannedTrail(feature: ArcGisFeature): FeatureRecord | null {
 
 function normalizePublicArt(feature: ArcGisFeature): FeatureRecord | null {
   const raw = feature.properties;
-  const objectId = asString(raw.OBJECTID);
-  const name = asString(raw.TITLE) ?? asString(raw.ARTWORKNAME);
+  const objectId = asString(pick(raw, "OBJECTID", "DCGIS.PLACE_NAMES_PT.OBJECTID"));
+  const name = asString(pick(raw, "TITLE", "ARTWORKNAME", "DCGIS.PLACE_NAMES_PT.NAME"));
 
   if (!objectId || !name || !feature.geometry) return null;
 
   const artist = asString(raw.ARTIST);
   const medium = asString(raw.MEDIUM) ?? asString(raw.ARTWORKTYPE);
-  const location = asString(raw.LOCATION) ?? asString(raw.SUBLOCALITY);
+  const category = asString(pick(raw, "MAR.VW_PLACE_NAME_CATEGORIES.CATEGORY"));
+  const location = asString(pick(raw, "LOCATION", "SUBLOCALITY", "DCGIS.ADDRESSES_PT.ADDRESS"));
   const descParts = [
     artist ? `By ${artist}.` : null,
-    medium,
+    medium ?? category,
     location ? `Located at ${location}.` : null,
   ].filter(Boolean);
 
@@ -220,11 +232,11 @@ function normalizePublicArt(feature: ArcGisFeature): FeatureRecord | null {
     source_type: "art_installation",
     source_id: objectId,
     name,
-    status: "complete",
-    ward: asString(raw.WARD),
+    status: normalizeStatus(pick(raw, "STATUS", "DCGIS.PLACE_NAMES_PT.STATUS")),
+    ward: asString(pick(raw, "WARD", "DCGIS.ADDRESSES_PT.WARD"))?.replace(/^Ward\s+/i, "") ?? null,
     mode: medium ?? "Public art",
     description: descParts.length ? descParts.join(" ") : asString(raw.DESCRIPTION),
-    timeline_start: raw.YEARINSTALLED ? `${asString(raw.YEARINSTALLED)}-01-01` : asDate(raw.CREATED_DATE),
+    timeline_start: raw.YEARINSTALLED ? `${asString(raw.YEARINSTALLED)}-01-01` : asDate(pick(raw, "CREATED_DATE", "DCGIS.PLACE_NAMES_PT.CREATED_DATE")),
     timeline_end: null,
     cost: null,
     official_url: asString(raw.URL),
@@ -287,11 +299,12 @@ export async function fetchBikeLanes(options: { labelLimit?: number } = {}) {
   const groups = new Map<string, ArcGisFeature[]>();
   for (const feature of features) {
     const raw = feature.properties;
-    const key =
+    const projectKey =
       asString(raw.Project)?.trim() ||
       asString(raw.RouteName)?.trim() ||
       asString(raw.ObjectID) ||
       "unknown";
+    const key = slugify(projectKey);
     const bucket = groups.get(key) ?? [];
     bucket.push(feature);
     groups.set(key, bucket);
@@ -380,7 +393,7 @@ export async function fetchTrailProjects() {
 }
 
 export async function fetchArtInstallations() {
-  const features = await fetchArcGisFeatures(PUBLIC_ART_URL, { paginate: true });
+  const features = await fetchArcGisFeatures(PUBLIC_ART_URL, { paginate: false });
   return features.map(normalizePublicArt).filter((feature): feature is FeatureRecord => Boolean(feature));
 }
 

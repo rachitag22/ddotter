@@ -15,12 +15,43 @@ function errorMessage(error: unknown) {
   return "Unknown sync error";
 }
 
+async function preserveEnrichedDescriptions(
+  supabase: ReturnType<typeof getSupabaseSyncClient>,
+  records: FeatureRecord[],
+) {
+  const descriptions = new Map<string, string>();
+  const chunkSize = 500;
+
+  for (let i = 0; i < records.length; i += chunkSize) {
+    const ids = records.slice(i, i + chunkSize).map((record) => record.id);
+    const { data, error } = await supabase
+      .from("features")
+      .select("id, description")
+      .in("id", ids)
+      .not("last_enriched_at", "is", null);
+
+    if (error) throw error;
+    for (const row of data ?? []) {
+      if (row.description) descriptions.set(row.id, row.description);
+    }
+  }
+
+  return records.map((record) => {
+    const description = descriptions.get(record.id);
+    return description ? { ...record, description } : record;
+  });
+}
+
 async function syncSource(sourceType: SourceType, getRecords: () => Promise<FeatureRecord[]>) {
   const startedAt = new Date().toISOString();
   const supabase = getSupabaseSyncClient();
 
   try {
-    const records = await getRecords();
+    const fetchedRecords = await getRecords();
+    const dedupedRecords = Array.from(
+      fetchedRecords.reduce((byId, record) => byId.set(record.id, record), new Map<string, FeatureRecord>()).values(),
+    );
+    const records = await preserveEnrichedDescriptions(supabase, dedupedRecords);
 
     if (records.length) {
       const { error: upsertError } = await supabase
@@ -42,7 +73,7 @@ async function syncSource(sourceType: SourceType, getRecords: () => Promise<Feat
     await supabase.from("sync_log").insert({
       source_type: sourceType,
       status: "success",
-      records_seen: records.length,
+      records_seen: fetchedRecords.length,
       records_upserted: records.length,
       started_at: startedAt,
       finished_at: new Date().toISOString(),
@@ -51,7 +82,7 @@ async function syncSource(sourceType: SourceType, getRecords: () => Promise<Feat
     return {
       source_type: sourceType,
       status: "success",
-      records_seen: records.length,
+      records_seen: fetchedRecords.length,
       records_upserted: records.length,
     };
   } catch (error) {

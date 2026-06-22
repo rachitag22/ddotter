@@ -60,6 +60,19 @@ pnpm dev
 
 The app renders sample DDOT project data when Supabase environment variables are missing. Once Supabase is configured, API routes read from the database through the server client.
 
+## Enrichment
+
+Run description enrichment without hand-writing auth headers:
+
+```bash
+pnpm enrich
+pnpm enrich -- --force
+pnpm enrich -- --id=bike-lane-11th-street-nw --force
+pnpm enrich -- --prod --force --limit=25
+```
+
+Defaults are local, bike lanes, and 10 records. `--force` retries records with `last_enrichment_attempted_at` already set.
+
 ## Supabase
 
 The initial schema lives in `supabase/migrations/202606190001_initial_schema.sql`.

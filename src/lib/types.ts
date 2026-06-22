@@ -22,6 +22,9 @@ export type FeatureRecord = {
   geometry: Geometry;
   raw: Record<string, unknown>;
   synced_at: string;
+  last_enrichment_attempted_at?: string | null;
+  last_enriched_at?: string | null;
+  enrichment_error?: string | null;
   feedback_count?: number;
   support_count?: number;
   support_percent?: number;

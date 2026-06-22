@@ -127,14 +127,16 @@ Authorization: Bearer <SYNC_SECRET>
 
 ## `GET /api/enrich` or `POST /api/enrich`
 
-Fills null `description` fields using Claude Haiku. Protected by `SYNC_SECRET` or `CRON_SECRET`. Requires `ANTHROPIC_API_KEY`.
+Enriches records using Claude Haiku when `last_enrichment_attempted_at` is null. Protected by `SYNC_SECRET` or `CRON_SECRET`. Requires `ANTHROPIC_API_KEY`.
 
 ### Query Parameters
 
 | Parameter | Example | Notes |
 | --- | --- | --- |
 | `source_type` | `capital_project` | Filter to one type (`bike_lane`, `capital_project`, `trail_project`) |
+| `id` | `bike-lane-11th-street-nw` | Enrich one specific feature |
 | `limit` | `10` | Cap records processed; overrides `ENRICH_LIMIT` env only if lower |
+| `force` | `true` | Retry records even if `last_enrichment_attempted_at` is already set |
 
 ### Response
 

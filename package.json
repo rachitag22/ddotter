@@ -7,6 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "enrich": "node scripts/enrich.mjs",
+    "enrich:local": "node scripts/enrich.mjs --local",
+    "enrich:prod": "node scripts/enrich.mjs --prod",
     "lint": "next lint"
   },
   "dependencies": {
