@@ -33,7 +33,7 @@ export async function POST(request: Request, context: RouteContext) {
 
   const supabase = getSupabaseServerClient();
   const { error } = await supabase.from("feedback").insert({
-    feature_id: id,
+    project_id: id,
     support: parsed.data.support,
     comment: parsed.data.comment,
     name: parsed.data.name || null,

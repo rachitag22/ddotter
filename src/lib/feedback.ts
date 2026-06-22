@@ -11,7 +11,7 @@ export const feedbackSchema = z.object({
 export async function getFeedbackAggregate(featureId: string) {
   if (!hasSupabaseConfig()) {
     return {
-      feature_id: featureId,
+      project_id: featureId,
       feedback_count: 0,
       support_count: 0,
       support_percent: 0,
@@ -22,7 +22,7 @@ export async function getFeedbackAggregate(featureId: string) {
   const { data, error } = await supabase
     .from("feedback")
     .select("support")
-    .eq("feature_id", featureId);
+    .eq("project_id", featureId);
 
   if (error) throw error;
 
@@ -30,7 +30,7 @@ export async function getFeedbackAggregate(featureId: string) {
   const supportCount = data?.filter((row) => row.support).length ?? 0;
 
   return {
-    feature_id: featureId,
+    project_id: featureId,
     feedback_count: feedbackCount,
     support_count: supportCount,
     support_percent: feedbackCount ? Math.round((supportCount / feedbackCount) * 100) : 0,

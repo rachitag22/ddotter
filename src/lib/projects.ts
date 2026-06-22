@@ -40,7 +40,7 @@ async function fetchProjects(filters: ProjectFilters): Promise<ProjectRecord[]> 
 
   for (let from = 0; ; from += pageSize) {
     let query = supabase
-      .from("features_with_feedback")
+      .from("projects_with_feedback")
       .select("*")
       .order("synced_at", { ascending: false })
       .range(from, from + pageSize - 1);
@@ -88,7 +88,7 @@ export async function getProject(id: string) {
 
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
-    .from("features_with_feedback")
+    .from("projects_with_feedback")
     .select("*")
     .eq("id", id)
     .maybeSingle();
