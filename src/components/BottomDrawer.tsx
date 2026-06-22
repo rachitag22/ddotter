@@ -37,14 +37,18 @@ export function BottomDrawer({
   selectedId,
   selectedFeature,
   selectedAssets = [],
+  isDetailLoading = false,
+  isListLoading = false,
 }: {
   features: ListProjectRecord[];
   filters: ProjectFilters;
   selectedId?: string;
   selectedFeature?: ListProjectRecord | null;
   selectedAssets?: ProjectAsset[];
+  isDetailLoading?: boolean;
+  isListLoading?: boolean;
 }) {
-  const isDetail = !!selectedFeature;
+  const isDetail = !!selectedId;
   const [snapState, setSnapState] = useState<DrawerState>(isDetail ? "preview" : "peek");
   const drawerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number; startTranslate: number } | null>(null);
@@ -62,9 +66,9 @@ export function BottomDrawer({
 
   // Snap to the right state whenever the selected project changes
   useEffect(() => {
-    applySnap(selectedFeature ? "preview" : "peek", !!selectedFeature);
+    applySnap(selectedId ? "preview" : "peek", !!selectedId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFeature?.id]);
+  }, [selectedId]);
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     // Let clicks on links and buttons propagate normally — don't capture their pointer.
@@ -170,49 +174,60 @@ export function BottomDrawer({
       <div className="drawer-body">
         {isDetail ? (
           <div className="drawer-detail">
-            <div className="meta">
-              <span className={`badge ${selectedFeature.status}`}>{selectedFeature.status}</span>
-              {selectedFeature.ward && <span className="badge">Ward {selectedFeature.ward}</span>}
-              <span className="badge">
-                {selectedFeature.mode ?? sourceTypeLabel[selectedFeature.source_type] ?? selectedFeature.source_type}
-              </span>
-            </div>
-            <h2 className="drawer-detail-name">{selectedFeature.name}</h2>
-            {selectedFeature.description && (
-              <p className="drawer-detail-desc">{selectedFeature.description}</p>
-            )}
-            <div className="project-grid">
-              <section>
-                <h2>Timeline</h2>
-                <p>{selectedFeature.timeline_start ?? "TBD"} — {selectedFeature.timeline_end ?? "TBD"}</p>
-              </section>
-              <section>
-                <h2>Estimated cost</h2>
-                <p>{selectedFeature.cost ? `$${selectedFeature.cost.toLocaleString()}` : "TBD"}</p>
-              </section>
-              <section>
-                <h2>Community signal</h2>
-                <p>
-                  {selectedFeature.feedback_count ?? 0} responses
-                  {selectedFeature.support_percent ? `, ${selectedFeature.support_percent}% support` : ""}
+            {isDetailLoading ? (
+              <div className="loading-state" role="status">
+                <span className="spinner" aria-hidden="true" />
+                <span>Loading project details...</span>
+              </div>
+            ) : selectedFeature ? (
+              <>
+                <div className="meta">
+                  <span className={`badge ${selectedFeature.status}`}>{selectedFeature.status}</span>
+                  {selectedFeature.ward && <span className="badge">Ward {selectedFeature.ward}</span>}
+                  <span className="badge">
+                    {selectedFeature.mode ?? sourceTypeLabel[selectedFeature.source_type] ?? selectedFeature.source_type}
+                  </span>
+                </div>
+                <h2 className="drawer-detail-name">{selectedFeature.name}</h2>
+                {selectedFeature.description && (
+                  <p className="drawer-detail-desc">{selectedFeature.description}</p>
+                )}
+                <div className="project-grid">
+                  <section>
+                    <h2>Timeline</h2>
+                    <p>{selectedFeature.timeline_start ?? "TBD"} — {selectedFeature.timeline_end ?? "TBD"}</p>
+                  </section>
+                  <section>
+                    <h2>Estimated cost</h2>
+                    <p>{selectedFeature.cost ? `$${selectedFeature.cost.toLocaleString()}` : "TBD"}</p>
+                  </section>
+                  <section>
+                    <h2>Community signal</h2>
+                    <p>
+                      {selectedFeature.feedback_count ?? 0} responses
+                      {selectedFeature.support_percent ? `, ${selectedFeature.support_percent}% support` : ""}
+                    </p>
+                  </section>
+                </div>
+                {selectedFeature.official_url && (
+                  <a
+                    className="drawer-ddot-link"
+                    href={selectedFeature.official_url}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    View on DDOT website ↗
+                  </a>
+                )}
+                <ProjectAssets assets={selectedAssets} />
+                <FeedbackForm featureId={selectedFeature.id} />
+                <p className="drawer-permalink">
+                  <Link href={`/projects/${selectedFeature.id}`}>Permanent link ↗</Link>
                 </p>
-              </section>
-            </div>
-            {selectedFeature.official_url && (
-              <a
-                className="drawer-ddot-link"
-                href={selectedFeature.official_url}
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                View on DDOT website ↗
-              </a>
+              </>
+            ) : (
+              <p className="empty-state">Project not found.</p>
             )}
-            <ProjectAssets assets={selectedAssets} />
-            <FeedbackForm featureId={selectedFeature.id} />
-            <p className="drawer-permalink">
-              <Link href={`/projects/${selectedFeature.id}`}>Permanent link ↗</Link>
-            </p>
           </div>
         ) : (
           <>
@@ -264,7 +279,13 @@ export function BottomDrawer({
             </form>
 
             <div className="project-list">
-              {features.map((project) => (
+              {isListLoading && (
+                <div className="loading-state compact" role="status">
+                  <span className="spinner" aria-hidden="true" />
+                  <span>Loading projects...</span>
+                </div>
+              )}
+              {!isListLoading && features.map((project) => (
                 <article
                   className={`project-card${selectedId === project.id ? " selected" : ""}`}
                   key={project.id}
@@ -287,7 +308,7 @@ export function BottomDrawer({
                   </Link>
                 </article>
               ))}
-              {features.length === 0 && (
+              {!isListLoading && features.length === 0 && (
                 <p className="empty-state">No projects match your filters.</p>
               )}
             </div>

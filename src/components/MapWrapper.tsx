@@ -8,7 +8,17 @@ const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
 const MapView = dynamic<{ features: ProjectRecord[]; filters?: ProjectFilters; selectedId?: string }>(
   () => import("@/components/MapView").then((m) => ({ default: m.MapView })),
-  { loading: () => <div className="map-loading" />, ssr: false },
+  {
+    loading: () => (
+      <div className="map-loading">
+        <div className="loading-state map-loading-state" role="status">
+          <span className="spinner" aria-hidden="true" />
+          <span>Loading map...</span>
+        </div>
+      </div>
+    ),
+    ssr: false,
+  },
 );
 
 export function MapWrapper({

@@ -84,10 +84,13 @@ export function BikeNetworkLayer() {
     setEnabled(next);
     if (next && !fetchedRef.current) {
       setLoading(true);
-      const data = await fetchBikeNetwork();
-      setSegments(data);
-      fetchedRef.current = true;
-      setLoading(false);
+      try {
+        const data = await fetchBikeNetwork();
+        setSegments(data);
+        fetchedRef.current = true;
+      } finally {
+        setLoading(false);
+      }
     }
   }
 
@@ -102,7 +105,8 @@ export function BikeNetworkLayer() {
             onChange={handleToggle}
             disabled={loading}
           />
-          {loading ? "Loading…" : "Show existing network"}
+          {loading && <span className="spinner tiny" aria-hidden="true" />}
+          {loading ? "Loading network..." : "Show existing network"}
         </label>
       </div>
 

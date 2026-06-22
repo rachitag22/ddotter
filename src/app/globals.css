@@ -121,10 +121,60 @@ button:disabled {
 
 /* Placeholder shown while the Leaflet bundle loads */
 .map-loading {
+  align-items: center;
   background: linear-gradient(135deg, var(--map-loading-start), var(--map-loading-end));
+  display: flex;
+  justify-content: center;
   inset: 0;
   position: fixed;
   z-index: var(--z-map);
+}
+
+.loading-state {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  font-size: var(--t-sm);
+  gap: 10px;
+  justify-content: center;
+  min-height: 180px;
+  text-align: center;
+}
+
+.loading-state.compact {
+  min-height: 120px;
+}
+
+.map-loading-state {
+  background: rgb(255 255 255 / 80%);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+  min-height: auto;
+  padding: 16px 18px;
+}
+
+.spinner {
+  animation: spin 0.75s linear infinite;
+  border: 3px solid var(--line);
+  border-top-color: var(--green);
+  border-radius: 50%;
+  display: inline-block;
+  height: 28px;
+  width: 28px;
+}
+
+.spinner.tiny {
+  border-width: 2px;
+  height: 14px;
+  width: 14px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Applied to the Leaflet MapContainer via className prop */
