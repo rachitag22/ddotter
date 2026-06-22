@@ -19,6 +19,7 @@
     "@ai-sdk/anthropic": "^3.0.85",
     "@supabase/supabase-js": "^2.84.0",
     "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "ai": "^6.0.208",
     "leaflet": "^1.9.4",
     "next": "^16.0.10",
