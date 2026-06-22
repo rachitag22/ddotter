@@ -1,4 +1,4 @@
-import { getProject, getProjects } from "@/lib/projects";
+import { getProject, getProjectAssets, getProjects } from "@/lib/projects";
 import { MapWrapper } from "@/components/MapWrapper";
 import { BottomDrawer } from "@/components/BottomDrawer";
 import type { ProjectRecord } from "@/lib/types";
@@ -26,9 +26,10 @@ export default async function Home({ searchParams }: PageProps) {
   };
   const selected = first(params.selected);
 
-  const [projects, selectedProject] = await Promise.all([
+  const [projects, selectedProject, selectedAssets] = await Promise.all([
     getProjects(filters),
     selected ? getProject(selected) : Promise.resolve(null),
+    selected ? getProjectAssets(selected) : Promise.resolve([]),
   ]);
 
   return (
@@ -39,6 +40,7 @@ export default async function Home({ searchParams }: PageProps) {
         filters={filters}
         selectedId={selected}
         selectedFeature={selectedProject ? toListProject(selectedProject) : null}
+        selectedAssets={selectedAssets}
       />
     </div>
   );

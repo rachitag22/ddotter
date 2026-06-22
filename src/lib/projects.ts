@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { sampleProjects } from "@/lib/sample-data";
 import { getSupabaseServerClient, hasSupabaseConfig } from "@/lib/supabase";
-import type { ProjectFilters, ProjectRecord } from "@/lib/types";
+import type { ProjectAsset, ProjectFilters, ProjectRecord } from "@/lib/types";
 
 function matchesFilters(project: ProjectRecord, filters: ProjectFilters) {
   if (filters.type) {
@@ -115,4 +115,19 @@ export function toGeoJson(projects: ProjectRecord[]) {
       },
     })),
   };
+}
+
+export async function getProjectAssets(projectId: string): Promise<ProjectAsset[]> {
+  if (!hasSupabaseConfig()) return [];
+
+  const supabase = getSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("project_assets")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("asset_type")
+    .order("title");
+
+  if (error) throw error;
+  return (data ?? []) as ProjectAsset[];
 }
