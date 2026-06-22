@@ -40,6 +40,22 @@ function resolveUrl(href: string, base: string): string | null {
   }
 }
 
+// DDOT pages have a large shared nav/footer. These patterns reliably identify
+// nav/utility links that are not project-specific and should be discarded.
+const NAV_PATTERNS = [
+  /^https?:\/\/(?:www\.)?dc\.gov\//,                   // dc.gov utility pages
+  /^https?:\/\/ddot\.dc\.gov\/page\//,                 // DDOT program pages (nav)
+  /^https?:\/\/ddot\.dc\.gov\/social/,                 // social media hub
+  /^https?:\/\/ddot\.dc\.gov\/publication\//,          // org charts, etc.
+  /^https?:\/\/ddot\.dc\.gov\/cdn-cgi\//,              // Cloudflare email obfuscation
+  /^https?:\/\/dcforms\.dc\.gov\//,                    // generic DC forms
+  /^https?:\/\/oca\.dc\.gov\//,                        // Office of Contracting
+];
+
+function isNavLink(url: string): boolean {
+  return NAV_PATTERNS.some((re) => re.test(url));
+}
+
 export function extractAssets(html: string, baseUrl: string): RawAsset[] {
   const seen = new Set<string>();
   const assets: RawAsset[] = [];
@@ -60,6 +76,9 @@ export function extractAssets(html: string, baseUrl: string): RawAsset[] {
     // Strip HTML tags from anchor text
     const title = anchorHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || null;
     const { asset_type, file_type } = classifyAsset(resolved, title);
+
+    // Drop generic nav/footer links unless they're a typed asset (doc/video/map)
+    if (asset_type === "link" && isNavLink(resolved)) continue;
 
     seen.add(resolved);
     assets.push({ url: resolved, title, asset_type, file_type });
