@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { facilityTypeColor, mapStyles } from "@/lib/design";
+import { FacilityTypeInfo } from "@/components/FacilityTypeInfo";
 import type { BikeSegment, Geometry } from "@/lib/types";
 
 // ─── Single segment polyline ──────────────────────────────────────────────────
@@ -104,6 +105,7 @@ export function BikeNetworkLayer() {
           />
           {loading ? "Loading…" : "Show existing network"}
         </label>
+        <FacilityTypeInfo />
       </div>
 
       {/* Polylines rendered into the map */}

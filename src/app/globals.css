@@ -157,9 +157,12 @@ button:disabled {
    ───────────────────────────────────────────────────────────────────────── */
 
 .network-toggle {
+  align-items: center;
   background: var(--panel);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-sm);
+  display: flex;
+  gap: 6px;
   padding: 8px 12px;
   position: fixed;
   right: 12px;
@@ -747,6 +750,129 @@ button:disabled {
 
 .form-note.error {
   color: var(--red);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Facility type info — ⓘ button + dialog
+   ───────────────────────────────────────────────────────────────────────── */
+
+.info-btn {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  opacity: 0.7;
+  padding: 0 2px;
+  transition: opacity var(--ease-base);
+  vertical-align: middle;
+}
+
+.info-btn:hover {
+  opacity: 1;
+}
+
+.facility-dialog {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: 0 8px 40px rgb(0 0 0 / 20%);
+  max-height: 80dvh;
+  max-width: 420px;
+  overflow-y: auto;
+  padding: 0;
+  width: calc(100% - 48px);
+}
+
+.facility-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
+}
+
+.facility-dialog-header {
+  align-items: center;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.facility-dialog-header h2 {
+  font-size: var(--t-base);
+  font-weight: 700;
+  margin: 0;
+}
+
+.facility-dialog-close {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 2px 4px;
+  transition: color var(--ease-base);
+}
+
+.facility-dialog-close:hover {
+  color: var(--text);
+  opacity: 1;
+}
+
+.facility-dialog-body {
+  padding: 8px 0 16px;
+}
+
+.facility-type-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  padding: 9px 20px;
+}
+
+.facility-type-row.child {
+  padding-left: 48px;
+  position: relative;
+}
+
+.facility-type-row.child::before {
+  border-bottom: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  content: "";
+  height: 14px;
+  left: 30px;
+  position: absolute;
+  top: 14px;
+  width: 8px;
+}
+
+.facility-type-icon {
+  border-radius: var(--r-xs);
+  display: block;
+  flex-shrink: 0;
+  height: 20px;
+  margin-top: 1px;
+  width: 20px;
+}
+
+.facility-type-text {
+  display: grid;
+  gap: 2px;
+}
+
+.facility-type-label {
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.facility-type-desc {
+  color: var(--muted);
+  font-size: var(--t-xs);
+  line-height: 1.5;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

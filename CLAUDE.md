@@ -15,7 +15,7 @@ There are no tests. Type-check with `pnpm build` or `tsc --noEmit`.
 
 ## What this is
 
-A public advocacy map of DC transportation projects. End users browse bike lanes, capital projects, trails, and public art on a Leaflet map and list, filter by type/ward/status, leave feedback, and share permalinks.
+A public advocacy map of DC transportation projects. End users browse bike lanes, capital projects, trails, and public art on a Google Maps Dynamic Map and list, filter by type/ward/status, leave feedback, and share permalinks.
 
 ArcGIS is **only called during sync** — never on page load. The frontend reads exclusively from Supabase.
 
@@ -41,12 +41,14 @@ curl -X GET "https://ddotter.vercel.app/api/enrich?limit=10" -H "Authorization: 
 |------|---------|
 | `src/lib/arcgis.ts` | Fetches and normalizes all 5 ArcGIS sources; merges bike lane segments |
 | `src/lib/enrich.ts` | LLM description synthesis + bike lane label cleaning (Claude Haiku) |
-| `src/lib/types.ts` | `FeatureRecord`, `SourceType`, `Geometry`, `FeatureFilters` |
-| `src/lib/features.ts` | `getFeatures()` / `getFeature()` — reads from `features_with_feedback` view; falls back to `src/lib/sample-data.ts` when Supabase is unconfigured |
-| `src/lib/design.ts` | Color tokens and `sourceTypeColor` / `sourceTypeLabel` maps |
+| `src/lib/types.ts` | `ProjectRecord`, `SourceType`, `Geometry`, `ProjectFilters`, `BikeSegment` |
+| `src/lib/design.ts` | Color tokens, `sourceTypeColor`, `facilityColor`, `mapStyles` |
 | `src/app/api/sync/route.ts` | Sync handler: upsert → delete stale records by timestamp |
 | `src/app/api/enrich/route.ts` | Enrichment handler: fills null descriptions using LLM |
-| `src/components/MapView.tsx` | Leaflet render (client component) |
+| `src/app/api/sync-bike-network/route.ts` | Sync handler for `bike_network` table (3 ArcGIS sources) |
+| `src/components/AppShell.tsx` | Stable client component; owns filter/project state; prevents Map remounts |
+| `src/components/MapView.tsx` | Google Maps render (`@vis.gl/react-google-maps`); `GmPolyline`, `DcGreyOverlay`, `BikeNetworkLayer` |
+| `src/components/BikeNetworkLayer.tsx` | Checkbox overlay; lazy-fetches and renders `bike_network` segments |
 
 ## ArcGIS sources
 
@@ -76,9 +78,11 @@ Two distinct LLM operations, both using Claude Haiku (`claude-haiku-4-5-20251001
 
 ## Map rendering quirks
 
-`MapContainer` uses `preferCanvas={true}`. In canvas mode, react-leaflet does **not** flush prop changes in place for `CircleMarker`. Fix: key `CircleMarker` and non-segment `Polyline` on `isSelected` (`key={\`${feature.id}-${isSelected}\`}`) to force remount on selection change.
+`MapView` uses `@vis.gl/react-google-maps` with map ID `13160d4e828befe69b060118` (required for `AdvancedMarker` and Cloud Console map styles).
 
-All filter state lives in URL search params. `MapView` reads `useSearchParams()` and appends `selected=<id>` without dropping existing params when a marker is clicked.
+Overlays (polylines, polygons) are created imperatively via `google.maps.Polyline` / `google.maps.Polygon` inside `useEffect` hooks — the pattern used by `GmPolyline` and `DcGreyOverlay`. Stable mount effect creates, option-update effects call `setOptions()`, cleanup effects call `setMap(null)`.
+
+`AppShell` is the stable client component that owns all data-fetching and filter state. It reads `useSearchParams()` and passes `features`, `filters`, and `selectedId` down as props — the `Map` component never remounts on filter changes.
 
 ## Supabase
 

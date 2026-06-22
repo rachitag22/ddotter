@@ -108,5 +108,7 @@ export const mapStyles = {
     selectedSegmentOpacity: 1,
     segmentWeight: 5,
     selectedSegmentWeight: 8,
+    zIndex: 2,
+    selectedZIndex: 12,
   },
 } as const;

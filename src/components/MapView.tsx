@@ -36,12 +36,14 @@ function GmPolyline({
   color,
   weight,
   opacity,
+  zIndex,
   onClick,
 }: {
   path: google.maps.LatLngLiteral[];
   color: string;
   weight: number;
   opacity: number;
+  zIndex: number;
   onClick: () => void;
 }) {
   const map = useMap();
@@ -56,6 +58,7 @@ function GmPolyline({
       strokeColor: color,
       strokeOpacity: opacity,
       strokeWeight: weight,
+      zIndex,
       map,
     });
     listenerRef.current = polylineRef.current.addListener("click", onClick);
@@ -67,8 +70,13 @@ function GmPolyline({
 
   // Update mutable style props without remounting
   useEffect(() => {
-    polylineRef.current?.setOptions({ strokeColor: color, strokeOpacity: opacity, strokeWeight: weight });
-  }, [color, opacity, weight]);
+    polylineRef.current?.setOptions({ strokeColor: color, strokeOpacity: opacity, strokeWeight: weight, zIndex });
+  }, [color, opacity, weight, zIndex]);
+
+  // Update geometry when the same project receives fresh coordinates
+  useEffect(() => {
+    polylineRef.current?.setPath(path);
+  }, [path]);
 
   // Update click handler
   useEffect(() => {
@@ -360,6 +368,7 @@ export function MapView({
                   color={color}
                   opacity={isSelected ? mapStyles.polyline.selectedSegmentOpacity : isDeselected ? mapStyles.polyline.dimOpacity : mapStyles.polyline.segmentOpacity}
                   weight={isSelected ? mapStyles.polyline.selectedSegmentWeight : mapStyles.polyline.segmentWeight}
+                  zIndex={isSelected ? mapStyles.polyline.selectedZIndex : mapStyles.polyline.zIndex}
                   onClick={onClick}
                 />,
                 isSelected && (
@@ -397,6 +406,7 @@ export function MapView({
               color={fill}
               opacity={isSelected ? mapStyles.polyline.selectedFeatureOpacity : isDeselected ? mapStyles.polyline.dimOpacity : mapStyles.polyline.featureOpacity}
               weight={isSelected ? mapStyles.polyline.selectedFeatureWeight : mapStyles.polyline.featureWeight}
+              zIndex={isSelected ? mapStyles.polyline.selectedZIndex : mapStyles.polyline.zIndex}
               onClick={onClick}
             />,
           ];
@@ -412,6 +422,7 @@ export function MapView({
                 color={fill}
                 opacity={isSelected ? mapStyles.polyline.selectedFeatureOpacity : isDeselected ? mapStyles.polyline.dimOpacity : mapStyles.polyline.featureOpacity}
                 weight={isSelected ? mapStyles.polyline.selectedFeatureWeight : mapStyles.polyline.featureWeight}
+                zIndex={isSelected ? mapStyles.polyline.selectedZIndex : mapStyles.polyline.zIndex}
                 onClick={onClick}
               />
             );

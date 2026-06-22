@@ -2,8 +2,7 @@
 
 import { APIProvider, Map } from "@vis.gl/react-google-maps";
 
-// Google Maps demo key — replace with a real key for production
-const DEMO_KEY = "AIzaSyD-9tSrke72PouQMnMX-a7eZSW0jkFmBad";
+const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
 
 // DC center
 const DC_CENTER = { lat: 38.9072, lng: -77.0369 };
@@ -12,9 +11,9 @@ export default function MapTestPage() {
   return (
     <div className="map-test-shell">
       <div className="map-test-header">
-        Google Maps Dynamic Map API — demo key test
+        Google Maps Dynamic Map API — test
       </div>
-      <APIProvider apiKey={DEMO_KEY}>
+      <APIProvider apiKey={GOOGLE_MAPS_KEY}>
         <div className="map-test-canvas">
           <Map
             className="map-test-canvas"
