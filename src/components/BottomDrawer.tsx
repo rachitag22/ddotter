@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { FeedbackForm } from "@/components/FeedbackForm";
 import { ProjectAssets } from "@/components/ProjectAssets";
 import { sourceTypeLabel } from "@/lib/design";
 import { buildCloseUrl, buildSelectedUrl } from "@/lib/url";
@@ -190,13 +189,6 @@ export function BottomDrawer({
                 <h2>Estimated cost</h2>
                 <p>{selectedFeature.cost ? `$${selectedFeature.cost.toLocaleString()}` : "TBD"}</p>
               </section>
-              <section>
-                <h2>Community signal</h2>
-                <p>
-                  {selectedFeature.feedback_count ?? 0} responses
-                  {selectedFeature.support_percent ? `, ${selectedFeature.support_percent}% support` : ""}
-                </p>
-              </section>
             </div>
             {selectedFeature.official_url && (
               <a
@@ -209,7 +201,6 @@ export function BottomDrawer({
               </a>
             )}
             <ProjectAssets assets={selectedAssets} />
-            <FeedbackForm featureId={selectedFeature.id} />
             <p className="drawer-permalink">
               <Link href={`/projects/${selectedFeature.id}`}>Permanent link ↗</Link>
             </p>
@@ -278,10 +269,6 @@ export function BottomDrawer({
                   </div>
                   <h2>{project.name}</h2>
                   {project.description && <p className="card-desc">{project.description}</p>}
-                  <p className="feedback-stat">
-                    {project.feedback_count ?? 0} responses
-                    {project.support_percent ? `, ${project.support_percent}% support` : ""}
-                  </p>
                   <Link className="link-button" href={buildSelectedUrl(project.id, filters)}>
                     View project →
                   </Link>

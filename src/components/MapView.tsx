@@ -252,6 +252,43 @@ function DcGreyOverlay() {
   return null;
 }
 
+// ─── Auto-pan to selected project ────────────────────────────────────────────
+
+function coordBoundsLiteral(coords: [number, number][]): google.maps.LatLngBoundsLiteral {
+  let north = -Infinity, south = Infinity, east = -Infinity, west = Infinity;
+  for (const [lng, lat] of coords) {
+    if (lat > north) north = lat;
+    if (lat < south) south = lat;
+    if (lng > east) east = lng;
+    if (lng < west) west = lng;
+  }
+  return { north, south, east, west };
+}
+
+function MapController({ features, selectedId }: { features: ProjectRecord[]; selectedId?: string }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || !selectedId) return;
+    const project = features.find((f) => f.id === selectedId);
+    if (!project) return;
+    const { geometry } = project;
+
+    if (geometry.type === "Point") {
+      const [lng, lat] = geometry.coordinates;
+      map.panTo({ lat, lng });
+      if ((map.getZoom() ?? 0) < 14) map.setZoom(14);
+    } else if (geometry.type === "LineString") {
+      map.fitBounds(coordBoundsLiteral(geometry.coordinates), 60);
+    } else if (geometry.type === "MultiLineString") {
+      map.fitBounds(coordBoundsLiteral(geometry.coordinates.flat()), 60);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, map]);
+
+  return null;
+}
+
 // ─── Main map ────────────────────────────────────────────────────────────────
 
 export function MapView({
@@ -272,6 +309,13 @@ export function MapView({
     };
   }
 
+  function onMapClick() {
+    if (!selectedId) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("selected");
+    router.push(`/?${params.toString()}`);
+  }
+
   return (
     <Map
       className="map-canvas"
@@ -281,9 +325,11 @@ export function MapView({
       gestureHandling="greedy"
       mapId="13160d4e828befe69b060118"
       mapTypeId="roadmap"
+      onClick={onMapClick}
     >
       <DcGreyOverlay />
       <BikeNetworkLayer />
+      <MapController features={features} selectedId={selectedId} />
       {features.flatMap((project) => {
         const isSelected = project.id === selectedId;
         const fill = sourceTypeColor[project.source_type] ?? sourceTypeColor.capital_project;

@@ -25,9 +25,6 @@ export type ProjectRecord = {
   last_enrichment_attempted_at?: string | null;
   last_enriched_at?: string | null;
   enrichment_error?: string | null;
-  feedback_count?: number;
-  support_count?: number;
-  support_percent?: number;
 };
 
 export type ProjectFilters = {
@@ -91,11 +88,4 @@ export type BikeSegment = {
   geometry: Geometry;
   raw: Record<string, unknown>;
   synced_at: string;
-};
-
-export type FeedbackPayload = {
-  support: boolean;
-  comment: string;
-  name?: string;
-  email?: string;
 };
