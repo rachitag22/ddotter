@@ -4,14 +4,15 @@ import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Map, AdvancedMarker, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import {
+  buildingColor,
   colorAlpha,
   facilityAbbrev,
   facilityColor,
   mapStyles,
-  sourceTypeColor,
+  plannedColor,
 } from "@/lib/design";
 import { BikeNetworkLayer } from "@/components/BikeNetworkLayer";
-import type { ProjectRecord } from "@/lib/types";
+import type { PillState, ProjectRecord } from "@/lib/types";
 
 const DC_CENTER = { lat: 38.9072, lng: -77.0369 };
 
@@ -303,11 +304,19 @@ function MapController({ features, selectedId }: { features: ProjectRecord[]; se
 
 // ─── Main map ────────────────────────────────────────────────────────────────
 
+function projectColor(status: string): string {
+  if (status === "active") return buildingColor;
+  if (status === "planned") return plannedColor;
+  return buildingColor;
+}
+
 export function MapView({
   features,
+  pills,
   selectedId,
 }: {
   features: ProjectRecord[];
+  pills: PillState;
   selectedId?: string;
 }) {
   const router = useRouter();
@@ -340,12 +349,12 @@ export function MapView({
       onClick={onMapClick}
     >
       <DcGreyOverlay />
-      <BikeNetworkLayer />
+      <BikeNetworkLayer enabled={pills.active} />
       <MapController features={features} selectedId={selectedId} />
       {features.flatMap((project) => {
         const isSelected = project.id === selectedId;
         const isDeselected = !!selectedId && !isSelected;
-        const fill = sourceTypeColor[project.source_type] ?? sourceTypeColor.capital_project;
+        const fill = projectColor(project.status);
         const onClick = makeOnClick(project.id);
 
         // Bike lanes: render each segment with facility color + optional tooltip

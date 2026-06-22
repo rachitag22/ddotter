@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
 import { facilityTypeColor, mapStyles } from "@/lib/design";
-import { FacilityTypeInfo } from "@/components/FacilityTypeInfo";
 import type { BikeSegment, Geometry } from "@/lib/types";
 
 // ─── Single segment polyline ──────────────────────────────────────────────────
@@ -60,7 +59,7 @@ async function fetchBikeNetwork(): Promise<BikeSegment[]> {
 
   for (let offset = 0; ; offset += pageSize) {
     const res = await fetch(
-      `${url}/rest/v1/bike_network?select=id,source,facility_type,status,geometry&offset=${offset}&limit=${pageSize}`,
+      `${url}/rest/v1/bike_network?select=id,source,facility_type,status,geometry&status=eq.existing&offset=${offset}&limit=${pageSize}`,
       { headers: { apikey: key, Authorization: `Bearer ${key}` } },
     );
     if (!res.ok) break;
@@ -74,49 +73,27 @@ async function fetchBikeNetwork(): Promise<BikeSegment[]> {
 
 // ─── Layer component (rendered inside <Map>) ──────────────────────────────────
 
-export function BikeNetworkLayer() {
-  const [enabled, setEnabled] = useState(false);
+export function BikeNetworkLayer({ enabled }: { enabled: boolean }) {
   const [segments, setSegments] = useState<BikeSegment[]>([]);
-  const [loading, setLoading] = useState(false);
   const fetchedRef = useRef(false);
 
-  async function handleToggle() {
-    const next = !enabled;
-    setEnabled(next);
-    if (next && !fetchedRef.current) {
-      setLoading(true);
-      const data = await fetchBikeNetwork();
-      setSegments(data);
-      fetchedRef.current = true;
-      setLoading(false);
-    }
-  }
+  useEffect(() => {
+    if (!enabled || fetchedRef.current) return;
+    fetchedRef.current = true;
+    fetchBikeNetwork().then(setSegments);
+  }, [enabled]);
+
+  if (!enabled) return null;
 
   return (
     <>
-      {/* Floating control — positioned over the map */}
-      <div className="network-toggle">
-        <label className="network-toggle-label">
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={handleToggle}
-            disabled={loading}
-          />
-          {loading ? "Loading…" : "Show existing network"}
-        </label>
-        <FacilityTypeInfo />
-      </div>
-
-      {/* Polylines rendered into the map */}
-      {enabled &&
-        segments.map((seg) => (
-          <NetworkPolyline
-            key={seg.id}
-            geometry={seg.geometry}
-            color={facilityTypeColor[seg.facility_type] ?? facilityTypeColor.unknown}
-          />
-        ))}
+      {segments.map((seg) => (
+        <NetworkPolyline
+          key={seg.id}
+          geometry={seg.geometry}
+          color={facilityTypeColor[seg.facility_type] ?? facilityTypeColor.unknown}
+        />
+      ))}
     </>
   );
 }

@@ -5,17 +5,15 @@ import { useRouter } from "next/navigation";
 import { SegmentList } from "@/components/SegmentList";
 import { sourceTypeLabel } from "@/lib/design";
 import { buildCloseUrl } from "@/lib/url";
-import type { ProjectFilters, ProjectRecord } from "@/lib/types";
+import type { ProjectRecord } from "@/lib/types";
 
 export function ProjectModal({
   project,
-  filters,
 }: {
   project: ProjectRecord;
-  filters: ProjectFilters;
 }) {
   const router = useRouter();
-  const closeUrl = buildCloseUrl(filters);
+  const closeUrl = buildCloseUrl();
 
   return (
     <div

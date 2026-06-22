@@ -50,6 +50,14 @@ export type ProjectAsset = {
   scraped_at: string;
 };
 
+// ─── Pill filter state ───────────────────────────────────────────────────────
+
+export type PillState = {
+  active: boolean;   // show existing bike_network segments (status='existing')
+  building: boolean; // show active DDOT projects (status='active')
+  planned: boolean;  // show planned DDOT projects (status='planned')
+};
+
 // ─── Bike network ────────────────────────────────────────────────────────────
 
 export type BikeNetworkSource =

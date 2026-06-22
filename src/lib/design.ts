@@ -39,18 +39,23 @@ export const sourceTypeLabel: Record<string, string> = {
   art_installation: "Art / memorial",
 };
 
+// Green shades — darkest (most protected) to lightest
 export const facilityTypeColor: Record<FacilityType, string> = {
-  protected: colors.green,
-  dual_protected: colors.mint,
-  buffered: colors.teal,
-  dual_buffered: colors.cyan,
-  conventional: colors.gold,
-  contraflow: colors.orange,
-  sharrow: colors.purple,
-  shared_path: colors.blue,
-  trail: colors.blue,
-  unknown: colors.gray,
+  protected:      "#14532d",
+  dual_protected: "#15803d",
+  trail:          "#166534",
+  shared_path:    "#047857",
+  buffered:       "#059669",
+  dual_buffered:  "#10b981",
+  conventional:   "#34d399",
+  contraflow:     "#6ee7b7",
+  sharrow:        "#86efac",
+  unknown:        colors.gray,
 };
+
+// Category colors for DDOT projects
+export const buildingColor = "#1d4ed8"; // blue  — active / under construction
+export const plannedColor  = "#ea580c"; // orange — planned
 
 export function facilityColor(facility: string | null): string {
   const value = (facility ?? "").toLowerCase();
