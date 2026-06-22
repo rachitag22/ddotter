@@ -231,7 +231,6 @@ export function BottomDrawer({
                   onChange={(e) => (e.target.form as HTMLFormElement).requestSubmit()}
                 >
                   <option value="">All types</option>
-                  <option value="capital_project">Capital</option>
                   <option value="bike_lane">Bike lane</option>
                   <option value="trail_project">Trail</option>
                 </select>

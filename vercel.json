@@ -4,6 +4,10 @@
     {
       "path": "/api/sync",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/sync-bike-network",
+      "schedule": "0 5 * * *"
     }
   ]
 }
