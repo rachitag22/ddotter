@@ -384,6 +384,7 @@ export function MapView({
         }
 
         if (project.geometry.type === "Point") {
+          if (isDeselected) return [];
           const [lng, lat] = project.geometry.coordinates;
           return [
             <PointMarker
@@ -391,7 +392,7 @@ export function MapView({
               position={{ lat, lng }}
               color={fill}
               isSelected={isSelected}
-              isDeselected={isDeselected}
+              isDeselected={false}
               onClick={onClick}
             />,
           ];
