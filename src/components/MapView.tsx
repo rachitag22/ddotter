@@ -87,11 +87,13 @@ function PointMarker({
   position,
   color,
   isSelected,
+  isDeselected,
   onClick,
 }: {
   position: google.maps.LatLngLiteral;
   color: string;
   isSelected: boolean;
+  isDeselected: boolean;
   onClick: () => void;
 }) {
   const marker = mapStyles.marker;
@@ -112,6 +114,8 @@ function PointMarker({
           border,
           boxShadow,
           cursor: marker.cursor,
+          opacity: isDeselected ? 0.2 : 1,
+          transition: "opacity 0.2s",
         }}
       />
     </AdvancedMarker>
@@ -332,6 +336,7 @@ export function MapView({
       <MapController features={features} selectedId={selectedId} />
       {features.flatMap((project) => {
         const isSelected = project.id === selectedId;
+        const isDeselected = !!selectedId && !isSelected;
         const fill = sourceTypeColor[project.source_type] ?? sourceTypeColor.capital_project;
         const onClick = makeOnClick(project.id);
 
@@ -353,7 +358,7 @@ export function MapView({
                   key={`${project.id}-seg-${i}`}
                   path={path}
                   color={color}
-                  opacity={isSelected ? mapStyles.polyline.selectedSegmentOpacity : mapStyles.polyline.segmentOpacity}
+                  opacity={isSelected ? mapStyles.polyline.selectedSegmentOpacity : isDeselected ? mapStyles.polyline.dimOpacity : mapStyles.polyline.segmentOpacity}
                   weight={isSelected ? mapStyles.polyline.selectedSegmentWeight : mapStyles.polyline.segmentWeight}
                   onClick={onClick}
                 />,
@@ -377,6 +382,7 @@ export function MapView({
               position={{ lat, lng }}
               color={fill}
               isSelected={isSelected}
+              isDeselected={isDeselected}
               onClick={onClick}
             />,
           ];
@@ -389,7 +395,7 @@ export function MapView({
               key={`${project.id}-${isSelected}`}
               path={path}
               color={fill}
-              opacity={isSelected ? mapStyles.polyline.selectedFeatureOpacity : mapStyles.polyline.featureOpacity}
+              opacity={isSelected ? mapStyles.polyline.selectedFeatureOpacity : isDeselected ? mapStyles.polyline.dimOpacity : mapStyles.polyline.featureOpacity}
               weight={isSelected ? mapStyles.polyline.selectedFeatureWeight : mapStyles.polyline.featureWeight}
               onClick={onClick}
             />,
@@ -404,7 +410,7 @@ export function MapView({
                 key={`${project.id}-line-${li}-${isSelected}`}
                 path={path}
                 color={fill}
-                opacity={isSelected ? mapStyles.polyline.selectedFeatureOpacity : mapStyles.polyline.featureOpacity}
+                opacity={isSelected ? mapStyles.polyline.selectedFeatureOpacity : isDeselected ? mapStyles.polyline.dimOpacity : mapStyles.polyline.featureOpacity}
                 weight={isSelected ? mapStyles.polyline.selectedFeatureWeight : mapStyles.polyline.featureWeight}
                 onClick={onClick}
               />

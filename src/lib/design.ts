@@ -101,6 +101,7 @@ export const mapStyles = {
     networkZIndex: -1,
     featureOpacity: 0.75,
     selectedFeatureOpacity: 1,
+    dimOpacity: 0.18,
     featureWeight: 5,
     selectedFeatureWeight: 9,
     segmentOpacity: 0.82,
