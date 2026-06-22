@@ -3,10 +3,15 @@ import { sampleProjects } from "@/lib/sample-data";
 import { getSupabaseServerClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { ProjectAsset, ProjectFilters, ProjectRecord } from "@/lib/types";
 
+const ALLOWED_SOURCE_TYPES = ["bike_lane", "trail_project"] as const;
+
 function matchesFilters(project: ProjectRecord, filters: ProjectFilters) {
-  if (filters.type) {
-    if (project.source_type !== filters.type) return false;
-  } else if (project.source_type !== "bike_lane" && project.source_type !== "trail_project") {
+  const type = filters.type && (ALLOWED_SOURCE_TYPES as readonly string[]).includes(filters.type)
+    ? filters.type
+    : null;
+  if (type) {
+    if (project.source_type !== type) return false;
+  } else if (!ALLOWED_SOURCE_TYPES.includes(project.source_type as typeof ALLOWED_SOURCE_TYPES[number])) {
     return false;
   }
   if (filters.ward && project.ward !== filters.ward) return false;
@@ -45,10 +50,13 @@ async function fetchProjects(filters: ProjectFilters): Promise<ProjectRecord[]> 
       .order("synced_at", { ascending: false })
       .range(from, from + pageSize - 1);
 
-    if (filters.type) {
-      query = query.eq("source_type", filters.type);
+    const type = filters.type && (ALLOWED_SOURCE_TYPES as readonly string[]).includes(filters.type)
+      ? filters.type
+      : null;
+    if (type) {
+      query = query.eq("source_type", type);
     } else {
-      query = query.in("source_type", ["bike_lane", "trail_project"]);
+      query = query.in("source_type", ALLOWED_SOURCE_TYPES);
     }
     if (filters.ward) query = query.eq("ward", filters.ward);
     if (filters.status) {
