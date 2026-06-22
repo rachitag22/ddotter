@@ -8,7 +8,8 @@ function classifyAsset(url: string, title: string | null): { asset_type: AssetTy
   if (/\.(pdf)(\?|#|$)/.test(lower)) return { asset_type: "document", file_type: "pdf" };
   if (/\.(pptx?|odp)(\?|#|$)/.test(lower)) return { asset_type: "document", file_type: "presentation" };
   if (/\.(docx?|odt)(\?|#|$)/.test(lower)) return { asset_type: "document", file_type: "document" };
-  if (/youtube\.com|youtu\.be|vimeo\.com/.test(lower)) return { asset_type: "video", file_type: null };
+  // Only specific videos, not channel/playlist pages
+  if (/youtube\.com\/watch\?|youtu\.be\/[a-z0-9_-]+|vimeo\.com\/\d+/i.test(lower)) return { asset_type: "video", file_type: null };
   if (/\.(jpe?g|png|gif|webp|svg)(\?|#|$)/.test(lower)) return { asset_type: "photo", file_type: null };
   if (/remix\.com|arcgis\.com\/apps\/(webappviewer|mapviewer|instant|dashboards)/i.test(lower)) {
     return { asset_type: "map", file_type: null };
@@ -40,6 +41,53 @@ function resolveUrl(href: string, base: string): string | null {
   }
 }
 
+// DDOT pages share a large nav/footer. These patterns identify links that are
+// site chrome rather than project-specific content and should be discarded.
+const SKIP_LINK_PATTERNS = [
+  // ddot.dc.gov — keep only /sites/ (document downloads); everything else is nav
+  /^https?:\/\/ddot\.dc\.gov\/(?!sites\/)/,
+  // DDOT subdomains that are general program pages, not project-specific
+  /^https?:\/\/(?:ate|bikelanes|ebikes|freight|stormwater|trails|policy|publicspaceactivation|projects)\.ddot\.dc\.gov\//,
+  // dc.gov utility pages
+  /^https?:\/\/(?:www\.)?dc\.gov\//,
+  /^https?:\/\/dcforms\.dc\.gov\//,
+  /^https?:\/\/oca\.dc\.gov\//,
+  /^https?:\/\/dataviz\d*\.dc\.gov\//,           // budget dashboards
+  // DDOT's own blog/social properties
+  /^https?:\/\/ddotdish\.com\//,
+  /^https?:\/\/ddotdc\.tumblr\.com\//,
+  // Social media (footer icons)
+  /^https?:\/\/(?:www\.)?(facebook|twitter|instagram|pinterest|flickr|tumblr|scribd)\.com\//,
+  /^https?:\/\/bsky\.app\//,
+  // Parking/general city services (footer links)
+  /^https?:\/\/(?:www\.)?parkdc\.com\//,
+  /^https?:\/\/trees\.dc\.gov\//,
+  // Accessibility/text-to-speech widgets
+  /readspeaker\.com\//,
+];
+
+const SKIP_PHOTO_PATTERNS = [
+  /shared_assets/,           // social icons, generic assets
+  /social_icons/,
+  /DDOT-Logo/i,
+  /DDOT-Dot/i,
+  /ddot_log/i,
+  /MayorBlogo/i,             // Mayor's logo (footer)
+  /application-pdf\.png/,    // PDF filetype icon
+  /biography_content/,       // staff headshots
+  /\/themes\//,              // theme/template assets
+  /Instagramlogo/i,          // social media logos
+  /\+rawURL\+/,              // broken template URLs
+];
+
+function isNavLink(url: string): boolean {
+  return SKIP_LINK_PATTERNS.some((re) => re.test(url));
+}
+
+function isDecorativePhoto(url: string): boolean {
+  return SKIP_PHOTO_PATTERNS.some((re) => re.test(url));
+}
+
 export function extractAssets(html: string, baseUrl: string): RawAsset[] {
   const seen = new Set<string>();
   const assets: RawAsset[] = [];
@@ -61,6 +109,9 @@ export function extractAssets(html: string, baseUrl: string): RawAsset[] {
     const title = anchorHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || null;
     const { asset_type, file_type } = classifyAsset(resolved, title);
 
+    // Drop generic nav/footer links unless they're a typed asset (doc/video/map)
+    if (asset_type === "link" && isNavLink(resolved)) continue;
+
     seen.add(resolved);
     assets.push({ url: resolved, title, asset_type, file_type });
   }
@@ -71,8 +122,9 @@ export function extractAssets(html: string, baseUrl: string): RawAsset[] {
     const resolved = resolveUrl(src, baseUrl);
     if (!resolved || seen.has(resolved)) continue;
 
-    // Skip data URIs and tiny tracking pixels
+    // Skip data URIs, tracking pixels, and decorative site assets
     if (resolved.startsWith("data:")) continue;
+    if (isDecorativePhoto(resolved)) continue;
 
     const altMatch = match[0].match(/\balt=["']([^"']*)["']/i);
     const title = altMatch?.[1]?.trim() || null;

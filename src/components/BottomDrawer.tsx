@@ -66,6 +66,8 @@ export function BottomDrawer({
   }, [selectedFeature?.id]);
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    // Let clicks on links and buttons propagate normally — don't capture their pointer.
+    if ((e.target as HTMLElement).closest("a, button")) return;
     const drawer = drawerRef.current;
     if (!drawer) return;
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -220,7 +222,6 @@ export function BottomDrawer({
                   onChange={(e) => (e.target.form as HTMLFormElement).requestSubmit()}
                 >
                   <option value="">All types</option>
-                  <option value="capital_project">Capital</option>
                   <option value="bike_lane">Bike lane</option>
                   <option value="trail_project">Trail</option>
                 </select>

@@ -85,14 +85,18 @@ async function handleScrape(request: Request) {
             id: project.id,
             official_url: project.official_url as string,
           });
+          // Delete stale assets before inserting fresh ones so removed
+          // nav/footer links don't persist across re-scrapes.
+          const { error: deleteError } = await supabase
+            .from("project_assets")
+            .delete()
+            .eq("project_id", project.id);
+          if (deleteError) throw deleteError;
           if (assets.length > 0) {
-            const { error: upsertError } = await supabase
+            const { error: insertError } = await supabase
               .from("project_assets")
-              .upsert(
-                assets.map((a) => ({ ...a, scraped_at: new Date().toISOString() })),
-                { onConflict: "project_id,url" },
-              );
-            if (upsertError) throw upsertError;
+              .insert(assets.map((a) => ({ ...a, scraped_at: new Date().toISOString() })));
+            if (insertError) throw insertError;
           }
           return { id: project.id, count: assets.length, error: null };
         } catch (err) {
