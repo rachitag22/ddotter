@@ -4,7 +4,11 @@ import { getSupabaseServerClient, hasSupabaseConfig } from "@/lib/supabase";
 import type { FeatureFilters, FeatureRecord } from "@/lib/types";
 
 function matchesFilters(feature: FeatureRecord, filters: FeatureFilters) {
-  if (filters.type && feature.source_type !== filters.type) return false;
+  if (filters.type) {
+    if (feature.source_type !== filters.type) return false;
+  } else if (feature.source_type === "art_installation") {
+    return false;
+  }
   if (filters.ward && feature.ward !== filters.ward) return false;
   if (filters.status) {
     const statuses = filters.status.split(",");
@@ -41,7 +45,11 @@ async function fetchFeatures(filters: FeatureFilters): Promise<FeatureRecord[]> 
       .order("synced_at", { ascending: false })
       .range(from, from + pageSize - 1);
 
-    if (filters.type) query = query.eq("source_type", filters.type);
+    if (filters.type) {
+      query = query.eq("source_type", filters.type);
+    } else {
+      query = query.neq("source_type", "art_installation");
+    }
     if (filters.ward) query = query.eq("ward", filters.ward);
     if (filters.status) {
       const statuses = filters.status.split(",");

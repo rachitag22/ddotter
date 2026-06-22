@@ -228,7 +228,6 @@ export function BottomDrawer({
                   <option value="capital_project">Capital</option>
                   <option value="bike_lane">Bike lane</option>
                   <option value="trail_project">Trail</option>
-                  <option value="art_installation">Art / memorial</option>
                 </select>
                 <select
                   className="filter-select"
