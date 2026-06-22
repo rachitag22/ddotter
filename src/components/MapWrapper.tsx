@@ -1,9 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { FeatureFilters, FeatureRecord } from "@/lib/types";
+import type { ProjectFilters, ProjectRecord } from "@/lib/types";
 
-const MapView = dynamic<{ features: FeatureRecord[]; filters?: FeatureFilters; selectedId?: string }>(
+const MapView = dynamic<{ features: ProjectRecord[]; filters?: ProjectFilters; selectedId?: string }>(
   () => import("@/components/MapView").then((m) => ({ default: m.MapView })),
   { loading: () => <div className="map-loading" />, ssr: false },
 );
@@ -13,8 +13,8 @@ export function MapWrapper({
   filters,
   selectedId,
 }: {
-  features: FeatureRecord[];
-  filters?: FeatureFilters;
+  features: ProjectRecord[];
+  filters?: ProjectFilters;
   selectedId?: string;
 }) {
   return <MapView features={features} filters={filters} selectedId={selectedId} />;

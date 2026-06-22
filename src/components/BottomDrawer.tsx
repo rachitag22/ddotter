@@ -5,7 +5,7 @@ import Link from "next/link";
 import { FeedbackForm } from "@/components/FeedbackForm";
 import { sourceTypeLabel } from "@/lib/design";
 import { buildCloseUrl, buildSelectedUrl } from "@/lib/url";
-import type { ListFeatureRecord, FeatureFilters } from "@/lib/types";
+import type { ListProjectRecord, ProjectFilters } from "@/lib/types";
 
 type DrawerState = "peek" | "half" | "full" | "preview";
 
@@ -36,10 +36,10 @@ export function BottomDrawer({
   selectedId,
   selectedFeature,
 }: {
-  features: ListFeatureRecord[];
-  filters: FeatureFilters;
+  features: ListProjectRecord[];
+  filters: ProjectFilters;
   selectedId?: string;
-  selectedFeature?: ListFeatureRecord | null;
+  selectedFeature?: ListProjectRecord | null;
 }) {
   const isDetail = !!selectedFeature;
   const [snapState, setSnapState] = useState<DrawerState>(isDetail ? "preview" : "peek");
@@ -57,7 +57,7 @@ export function BottomDrawer({
     setSnapState(newState);
   }
 
-  // Snap to the right state whenever the selected feature changes
+  // Snap to the right state whenever the selected project changes
   useEffect(() => {
     applySnap(selectedFeature ? "preview" : "peek", !!selectedFeature);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -205,7 +205,7 @@ export function BottomDrawer({
             )}
             <FeedbackForm featureId={selectedFeature.id} />
             <p className="drawer-permalink">
-              <Link href={`/features/${selectedFeature.id}`}>Permanent link ↗</Link>
+              <Link href={`/projects/${selectedFeature.id}`}>Permanent link ↗</Link>
             </p>
           </div>
         ) : (
@@ -259,25 +259,25 @@ export function BottomDrawer({
             </form>
 
             <div className="project-list">
-              {features.map((feature) => (
+              {features.map((project) => (
                 <article
-                  className={`project-card${selectedId === feature.id ? " selected" : ""}`}
-                  key={feature.id}
+                  className={`project-card${selectedId === project.id ? " selected" : ""}`}
+                  key={project.id}
                 >
                   <div className="meta">
-                    <span className={`badge ${feature.status}`}>{feature.status}</span>
-                    <span className="badge">Ward {feature.ward ?? "?"}</span>
+                    <span className={`badge ${project.status}`}>{project.status}</span>
+                    <span className="badge">Ward {project.ward ?? "?"}</span>
                     <span className="badge">
-                      {feature.mode ?? sourceTypeLabel[feature.source_type] ?? feature.source_type}
+                      {project.mode ?? sourceTypeLabel[project.source_type] ?? project.source_type}
                     </span>
                   </div>
-                  <h2>{feature.name}</h2>
-                  {feature.description && <p className="card-desc">{feature.description}</p>}
+                  <h2>{project.name}</h2>
+                  {project.description && <p className="card-desc">{project.description}</p>}
                   <p className="feedback-stat">
-                    {feature.feedback_count ?? 0} responses
-                    {feature.support_percent ? `, ${feature.support_percent}% support` : ""}
+                    {project.feedback_count ?? 0} responses
+                    {project.support_percent ? `, ${project.support_percent}% support` : ""}
                   </p>
-                  <Link className="link-button" href={buildSelectedUrl(feature.id, filters)}>
+                  <Link className="link-button" href={buildSelectedUrl(project.id, filters)}>
                     View project →
                   </Link>
                 </article>

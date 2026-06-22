@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import { sourceTypeColor } from "@/lib/design";
-import type { FeatureRecord } from "@/lib/types";
+import type { ProjectRecord } from "@/lib/types";
 
 type RawSeg = { facility: string | null; label: string | null; coordinates?: [number, number][] };
 
@@ -38,7 +38,7 @@ export function MapView({
   features,
   selectedId,
 }: {
-  features: FeatureRecord[];
+  features: ProjectRecord[];
   selectedId?: string;
 }) {
   const router = useRouter();
@@ -60,16 +60,16 @@ export function MapView({
         updateWhenZooming={false}
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {features.flatMap((feature) => {
-        const isSelected = feature.id === selectedId;
-        const fill = sourceTypeColor[feature.source_type] ?? sourceTypeColor.capital_project;
+      {features.flatMap((project) => {
+        const isSelected = project.id === selectedId;
+        const fill = sourceTypeColor[project.source_type] ?? sourceTypeColor.capital_project;
         const params = new URLSearchParams(searchParams.toString());
-        params.set("selected", feature.id);
+        params.set("selected", project.id);
         const onClick = () => router.push(`/?${params.toString()}`);
 
         // Bike lanes: render each segment with its own facility color + label
-        if (feature.source_type === "bike_lane") {
-          const segs = getSegments(feature.raw);
+        if (project.source_type === "bike_lane") {
+          const segs = getSegments(project.raw);
           if (segs) {
             return segs.flatMap((seg, i) => {
               const coords = seg.coordinates;
@@ -77,12 +77,12 @@ export function MapView({
               const positions = coords.map(([lng, lat]) => [lat, lng] as [number, number]);
               const color = facilityColor(seg.facility);
               const abbrev = facilityAbbrev(seg.facility);
-              const segLabel = seg.label && seg.label !== feature.name ? seg.label : null;
+              const segLabel = seg.label && seg.label !== project.name ? seg.label : null;
               const tooltipText = segLabel ? `${abbrev} · ${segLabel}` : abbrev;
 
               return [
                 <Polyline
-                  key={`${feature.id}-${i}`}
+                  key={`${project.id}-${i}`}
                   eventHandlers={{ click: onClick }}
                   pathOptions={{ color, opacity: isSelected ? 1 : 0.82, weight: isSelected ? 8 : 5 }}
                   positions={positions}
@@ -98,13 +98,13 @@ export function MapView({
           }
         }
 
-        if (feature.geometry.type === "Point") {
-          const [lng, lat] = feature.geometry.coordinates;
+        if (project.geometry.type === "Point") {
+          const [lng, lat] = project.geometry.coordinates;
           return [
             <CircleMarker
               center={[lat, lng]}
               eventHandlers={{ click: onClick }}
-              key={`${feature.id}-${isSelected}`}
+              key={`${project.id}-${isSelected}`}
               pathOptions={{
                 color: isSelected ? fill : "#fff",
                 fillColor: fill,
@@ -116,28 +116,28 @@ export function MapView({
           ];
         }
 
-        if (feature.geometry.type === "LineString") {
-          const positions = feature.geometry.coordinates.map(
+        if (project.geometry.type === "LineString") {
+          const positions = project.geometry.coordinates.map(
             ([lng, lat]) => [lat, lng] as [number, number],
           );
           return [
             <Polyline
               eventHandlers={{ click: onClick }}
-              key={`${feature.id}-${isSelected}`}
+              key={`${project.id}-${isSelected}`}
               pathOptions={{ color: fill, opacity: isSelected ? 1 : 0.75, weight: isSelected ? 9 : 5 }}
               positions={positions}
             />,
           ];
         }
 
-        if (feature.geometry.type === "MultiLineString") {
-          const positions = feature.geometry.coordinates.map((line) =>
+        if (project.geometry.type === "MultiLineString") {
+          const positions = project.geometry.coordinates.map((line) =>
             line.map(([lng, lat]) => [lat, lng] as [number, number]),
           );
           return [
             <Polyline
               eventHandlers={{ click: onClick }}
-              key={`${feature.id}-${isSelected}`}
+              key={`${project.id}-${isSelected}`}
               pathOptions={{ color: fill, opacity: isSelected ? 1 : 0.75, weight: isSelected ? 9 : 5 }}
               positions={positions}
             />,

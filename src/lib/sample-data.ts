@@ -1,6 +1,6 @@
-import type { FeatureRecord } from "@/lib/types";
+import type { ProjectRecord } from "@/lib/types";
 
-export const sampleFeatures: FeatureRecord[] = [
+export const sampleProjects: ProjectRecord[] = [
   {
     id: "capital-project-1001",
     source_type: "capital_project",

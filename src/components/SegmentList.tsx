@@ -1,4 +1,4 @@
-import type { FeatureRecord } from "@/lib/types";
+import type { ProjectRecord } from "@/lib/types";
 
 type RawSegment = { facility: string | null; label: string | null };
 
@@ -14,8 +14,8 @@ function isRawSegmentArray(value: unknown): value is RawSegment[] {
   );
 }
 
-export function SegmentList({ feature }: { feature: FeatureRecord }) {
-  const raw = feature.raw._segments;
+export function SegmentList({ project }: { project: ProjectRecord }) {
+  const raw = project.raw._segments;
   if (!isRawSegmentArray(raw) || raw.length < 2) return null;
 
   return (
@@ -25,7 +25,7 @@ export function SegmentList({ feature }: { feature: FeatureRecord }) {
         {raw.map((seg, i) => (
           <li key={i}>
             <span className="seg-facility">{seg.facility ?? "Unknown type"}</span>
-            {seg.label && seg.label !== feature.name && (
+            {seg.label && seg.label !== project.name && (
               <span className="seg-label">{seg.label}</span>
             )}
           </li>

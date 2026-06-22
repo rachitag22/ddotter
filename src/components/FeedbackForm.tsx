@@ -8,7 +8,7 @@ export function FeedbackForm({ featureId }: { featureId: string }) {
   async function onSubmit(formData: FormData) {
     setState("submitting");
 
-    const response = await fetch(`/api/features/${featureId}/feedback`, {
+    const response = await fetch(`/api/projects/${featureId}/feedback`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({

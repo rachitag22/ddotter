@@ -1,9 +1,9 @@
-import { getFeature, getFeatures } from "@/lib/features";
+import { getProject, getProjects } from "@/lib/projects";
 import { MapWrapper } from "@/components/MapWrapper";
 import { BottomDrawer } from "@/components/BottomDrawer";
-import type { FeatureRecord } from "@/lib/types";
+import type { ProjectRecord } from "@/lib/types";
 
-function toListFeature({ raw: _raw, geometry: _geo, ...rest }: FeatureRecord) {
+function toListProject({ raw: _raw, geometry: _geo, ...rest }: ProjectRecord) {
   return rest;
 }
 
@@ -26,19 +26,19 @@ export default async function Home({ searchParams }: PageProps) {
   };
   const selected = first(params.selected);
 
-  const [features, selectedFeature] = await Promise.all([
-    getFeatures(filters),
-    selected ? getFeature(selected) : Promise.resolve(null),
+  const [projects, selectedProject] = await Promise.all([
+    getProjects(filters),
+    selected ? getProject(selected) : Promise.resolve(null),
   ]);
 
   return (
     <div className="app">
-      <MapWrapper features={features} filters={filters} selectedId={selected} />
+      <MapWrapper features={projects} filters={filters} selectedId={selected} />
       <BottomDrawer
-        features={features.map(toListFeature)}
+        features={projects.map(toListProject)}
         filters={filters}
         selectedId={selected}
-        selectedFeature={selectedFeature ? toListFeature(selectedFeature) : null}
+        selectedFeature={selectedProject ? toListProject(selectedProject) : null}
       />
     </div>
   );
