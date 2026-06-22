@@ -137,6 +137,25 @@ button:disabled {
   white-space: nowrap;
 }
 
+/* Network segment InfoWindow */
+.network-info-window {
+  display: grid;
+  gap: 2px;
+  min-width: 140px;
+}
+
+.network-info-type {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  margin: 0;
+}
+
+.network-info-meta {
+  color: var(--muted);
+  font-size: var(--t-xs);
+  margin: 0;
+}
+
 /* Applied to the Leaflet MapContainer via className prop */
 .map-canvas {
   bottom: 0;

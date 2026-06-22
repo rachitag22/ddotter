@@ -1,85 +1,50 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { facilityTypeColor } from "@/lib/design";
+import { facilityTypeColor, facilityTypeLabel } from "@/lib/design";
 import type { FacilityType } from "@/lib/types";
 
 type FacilityEntry = {
   key: FacilityType;
-  label: string;
   description: string;
-  children?: { key: FacilityType; label: string; description: string }[];
+  children?: { key: FacilityType; description: string }[];
 };
 
 const FACILITY_TYPES: FacilityEntry[] = [
   {
     key: "protected",
-    label: "Protected",
     description: "Physically separated from traffic by a barrier, bollards, or raised curb.",
     children: [
-      {
-        key: "dual_protected",
-        label: "Dual protected",
-        description: "Protected on both sides of the lane.",
-      },
+      { key: "dual_protected", description: "Protected on both sides of the lane." },
     ],
   },
   {
     key: "buffered",
-    label: "Buffered",
     description: "Painted buffer zone between the bike lane and traffic or parking — no physical barrier.",
     children: [
-      {
-        key: "dual_buffered",
-        label: "Dual buffered",
-        description: "Buffer on both sides of the lane.",
-      },
+      { key: "dual_buffered", description: "Buffer on both sides of the lane." },
     ],
   },
-  {
-    key: "conventional",
-    label: "Conventional",
-    description: "Standard painted bike lane — no buffer or protection.",
-  },
-  {
-    key: "contraflow",
-    label: "Contraflow",
-    description: "Bike lane running opposite to vehicle traffic on a one-way street.",
-  },
-  {
-    key: "sharrow",
-    label: "Sharrow",
-    description: "Shared lane: no dedicated lane, just road markings (chevrons) showing bikes share the road.",
-  },
-  {
-    key: "shared_path",
-    label: "Shared path",
-    description: "Multi-use path shared with pedestrians, off the roadway.",
-  },
-  {
-    key: "trail",
-    label: "Trail",
-    description: "Off-road trail or greenway.",
-  },
+  { key: "conventional", description: "Standard painted bike lane — no buffer or protection." },
+  { key: "contraflow",   description: "Bike lane running opposite to vehicle traffic on a one-way street." },
+  { key: "sharrow",      description: "Shared lane: no dedicated lane, just road markings (chevrons) showing bikes share the road." },
+  { key: "shared_path",  description: "Multi-use path shared with pedestrians, off the roadway." },
+  { key: "trail",        description: "Off-road trail or greenway." },
 ];
 
 function FacilityRow({
   type,
   isChild = false,
 }: {
-  type: { key: FacilityType; label: string; description: string };
+  type: { key: FacilityType; description: string };
   isChild?: boolean;
 }) {
   return (
     <div className={`facility-type-row${isChild ? " child" : ""}`}>
       {/* placeholder icon slot — swap for <img src="…" /> when icons are ready */}
-      <span
-        aria-hidden="true"
-        className="facility-type-icon"
-        style={{ background: facilityTypeColor[type.key] }}
-      />
+      <span aria-hidden="true" className="facility-type-icon" style={{ background: facilityTypeColor[type.key] }} />
       <div className="facility-type-text">
-        <span className="facility-type-label">{type.label}</span>
+        <span className="facility-type-label">{facilityTypeLabel[type.key]}</span>
         <span className="facility-type-desc">{type.description}</span>
       </div>
     </div>

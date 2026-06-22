@@ -1,22 +1,31 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
-import { facilityTypeColor, mapStyles } from "@/lib/design";
-import type { BikeSegment, Geometry } from "@/lib/types";
+import { InfoWindow, useMap, useMapsLibrary } from "@vis.gl/react-google-maps";
+import { facilityTypeColor, facilityTypeLabel, mapStyles } from "@/lib/design";
+import type { BikeSegment, FacilityType, Geometry } from "@/lib/types";
+
+type ClickInfo = {
+  position: google.maps.LatLngLiteral;
+  facilityType: FacilityType;
+  ward: string | null;
+};
 
 // ─── Single segment polyline ──────────────────────────────────────────────────
 
 function NetworkPolyline({
   geometry,
   color,
+  onClick,
 }: {
   geometry: Geometry;
   color: string;
+  onClick: (e: google.maps.MapMouseEvent) => void;
 }) {
   const map = useMap();
   const mapsLib = useMapsLibrary("maps");
-  const ref = useRef<google.maps.Polyline | null>(null);
+  const onClickRef = useRef(onClick);
+  onClickRef.current = onClick;
 
   useEffect(() => {
     if (!map || !mapsLib) return;
@@ -39,9 +48,11 @@ function NetworkPolyline({
           zIndex: mapStyles.polyline.networkZIndex,
         }),
     );
+    const listeners = polylines.map((p) =>
+      p.addListener("click", (e: google.maps.MapMouseEvent) => { e.stop(); onClickRef.current(e); }),
+    );
 
-    ref.current = polylines[0] ?? null;
-    return () => polylines.forEach((p) => p.setMap(null));
+    return () => { listeners.forEach((l) => l.remove()); polylines.forEach((p) => p.setMap(null)); };
   }, [map, mapsLib, geometry, color]);
 
   return null;
@@ -59,7 +70,7 @@ async function fetchBikeNetwork(): Promise<BikeSegment[]> {
 
   for (let offset = 0; ; offset += pageSize) {
     const res = await fetch(
-      `${url}/rest/v1/bike_network?select=id,source,facility_type,status,geometry&status=eq.existing&offset=${offset}&limit=${pageSize}`,
+      `${url}/rest/v1/bike_network?select=id,source,facility_type,status,ward,geometry&status=eq.existing&offset=${offset}&limit=${pageSize}`,
       { headers: { apikey: key, Authorization: `Bearer ${key}` } },
     );
     if (!res.ok) break;
@@ -75,6 +86,7 @@ async function fetchBikeNetwork(): Promise<BikeSegment[]> {
 
 export function BikeNetworkLayer({ enabled }: { enabled: boolean }) {
   const [segments, setSegments] = useState<BikeSegment[]>([]);
+  const [clickInfo, setClickInfo] = useState<ClickInfo | null>(null);
   const fetchedRef = useRef(false);
 
   useEffect(() => {
@@ -92,8 +104,26 @@ export function BikeNetworkLayer({ enabled }: { enabled: boolean }) {
           key={seg.id}
           geometry={seg.geometry}
           color={facilityTypeColor[seg.facility_type] ?? facilityTypeColor.unknown}
+          onClick={(e) => {
+            const latLng = e.latLng;
+            if (!latLng) return;
+            setClickInfo({
+              position: { lat: latLng.lat(), lng: latLng.lng() },
+              facilityType: seg.facility_type,
+              ward: seg.ward,
+            });
+          }}
         />
       ))}
+      {clickInfo && (
+        <InfoWindow position={clickInfo.position} onCloseClick={() => setClickInfo(null)}>
+          <div className="network-info-window">
+            <p className="network-info-type">{facilityTypeLabel[clickInfo.facilityType]}</p>
+            {clickInfo.ward && <p className="network-info-meta">Ward {clickInfo.ward}</p>}
+            <p className="network-info-meta">Existing bike network</p>
+          </div>
+        </InfoWindow>
+      )}
     </>
   );
 }

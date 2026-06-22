@@ -31,6 +31,19 @@ export const sourceTypeLabel: Record<string, string> = {
   art_installation: "Art / memorial",
 };
 
+export const facilityTypeLabel: Record<FacilityType, string> = {
+  protected:      "Protected",
+  dual_protected: "Dual protected",
+  buffered:       "Buffered",
+  dual_buffered:  "Dual buffered",
+  conventional:   "Conventional",
+  contraflow:     "Contraflow",
+  sharrow:        "Sharrow",
+  shared_path:    "Shared path",
+  trail:          "Trail",
+  unknown:        "Unknown",
+};
+
 // Green shades — darkest (most protected) to lightest
 export const facilityTypeColor: Record<FacilityType, string> = {
   protected:      "#14532d",
