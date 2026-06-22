@@ -332,26 +332,6 @@ button:disabled {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Map segment tooltips (facility-type labels on bike lane segments)
-   ───────────────────────────────────────────────────────────────────────── */
-
-.seg-tooltip {
-  background: rgba(23, 33, 29, 0.82);
-  border: none;
-  border-radius: var(--r-pill);
-  box-shadow: none;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  padding: 2px 8px;
-  white-space: nowrap;
-}
-
-.seg-tooltip::before {
-  display: none;
-}
-
 /* ─────────────────────────────────────────────────────────────────────────
    Segment breakdown (bike lanes with mixed facility types)
    ───────────────────────────────────────────────────────────────────────── */
@@ -710,52 +690,11 @@ button:disabled {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Leaflet overrides
+   Google Maps overrides
    ───────────────────────────────────────────────────────────────────────── */
 
-.leaflet-container {
-  font-family: inherit;
-}
-
-/* Shorten zoom animation from Leaflet's default 0.25 s so the CSS-scaled
-   frame (the source of perceived blur) is visible for less time. */
-.leaflet-zoom-anim .leaflet-zoom-animated {
-  transition-duration: 0.15s;
-}
-
-.leaflet-popup-content-wrapper {
-  border-radius: var(--r-md) !important;
-  box-shadow: var(--shadow-drawer) !important;
-  padding: 0 !important;
-}
-
-.leaflet-popup-content {
-  margin: 0 !important;
-  width: auto !important;
-}
-
-.map-popup {
-  display: grid;
-  gap: 8px;
-  padding: 14px 16px;
-}
-
-.map-popup-name {
-  color: var(--text);
-  font-size: var(--t-sm);
-  font-weight: 600;
-  line-height: 1.35;
-  margin: 0;
-}
-
-.map-popup-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.map-popup-link {
-  color: var(--green);
-  font-size: var(--t-sm);
-  font-weight: 500;
+/* Push Google's logo / attribution out of the way of the bottom drawer */
+.gm-style .gmnoprint,
+.gm-style .gm-bundled-control {
+  bottom: 24px !important;
 }
