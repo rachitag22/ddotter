@@ -96,8 +96,8 @@ Overlays (polylines, polygons) are created imperatively via `google.maps.Polylin
 
 | Column | Type | Notes |
 |--------|------|-------|
-| `id` | text PK | `bike-inv-{OBJECTID}`, `bike-proj-{ObjectID}`, `trail-{OBJECTID}`, `planned-trail-{OBJECTID}` |
-| `source` | text | `bike_lane_inventory` · `bike_lane_project` · `bike_trail` · `planned_trail` |
+| `id` | text PK | `bike-inv-{OBJECTID}`, `trail-{OBJECTID}`, `planned-trail-{OBJECTID}` |
+| `source` | text | `bike_lane_inventory` · `bike_trail` · `planned_trail` |
 | `facility_type` | text | `protected` · `dual_protected` · `buffered` · `dual_buffered` · `conventional` · `contraflow` · `sharrow` · `shared_path` · `trail` · `unknown` |
 | `status` | text | `existing` · `planned` · `under_construction` · `future` · `complete` · `unknown` |
 | `ward` | text | |
@@ -119,6 +119,7 @@ curl -X GET "https://ddotter.vercel.app/api/sync-bike-network?only=bike_lane_inv
 3. `202606190003_sync_sources.sql` — adds `bike_lane` source type; `private.sync_secrets` table; `private.sync_request_authorized()` function; RLS for sync writes
 4. `20260620222100_allow_sync_delete_stale_features.sql` — grants DELETE to anon for stale-record cleanup
 5. `20260622002000_bike_network.sql` — `bike_network` table with facility_type + status enums, RLS, indexes
+6. `20260622003000_bike_network_drop_project_source.sql` — drops `bike_lane_project` source; adds `project_id FK → projects(id)`
 
 ## Environment variables
 
@@ -134,11 +135,12 @@ curl -X GET "https://ddotter.vercel.app/api/sync-bike-network?only=bike_lane_inv
 | `ANTHROPIC_API_KEY` | Required for LLM | Gates all Claude calls; `/api/enrich` returns 500 without it |
 | `LABEL_CLEAN_LIMIT` | Optional | Max labels cleaned per sync. **Default 10** (safe). Set `-1` for unlimited. |
 | `ENRICH_LIMIT` | Optional | Max records enriched per `/api/enrich` call. **Default 10** (safe). Set `-1` for unlimited. |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Yes | Google Maps JavaScript API key; must have Dynamic Maps enabled |
 
 Both limit vars accept `-1` for unlimited; query params (`?label_limit=N`, `?limit=N`) can lower but not raise the env ceiling.
 
 ## Page structure
 
-The home page (`src/app/page.tsx`) is a server component that reads filters from URL params, fetches features, then renders `MapWrapper` (client boundary) + `BottomDrawer` (list/modal panel). Default filters when no params are set: `type=bike_lane`, `status=active,planned`.
+The home page (`src/app/page.tsx`) is a thin server component that renders `<AppShell>` inside a `<Suspense>` boundary. `AppShell` is the stable client component — it reads `useSearchParams()`, owns project-loading state, and renders `MapWrapper` + `BottomDrawer`. Default filters when no params are set: `type=bike_lane`, `status=active,planned`.
 
-`/features/[id]` is a shareable permalink for a single project.
+`/projects/[id]` is a shareable permalink for a single project.
