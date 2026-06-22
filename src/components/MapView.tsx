@@ -51,41 +51,25 @@ function GmPolyline({
   const mapsLib = useMapsLibrary("maps");
   const polylineRef = useRef<google.maps.Polyline | null>(null);
   const listenerRef = useRef<google.maps.MapsEventListener | null>(null);
+  // Ref so the click listener always calls the latest onClick without re-registering
+  const onClickRef = useRef(onClick);
+  onClickRef.current = onClick;
 
   useEffect(() => {
     if (!map || !mapsLib) return;
-    polylineRef.current = new mapsLib.Polyline({
-      path,
-      strokeColor: color,
-      strokeOpacity: opacity,
-      strokeWeight: weight,
-      zIndex,
-      map,
-    });
-    listenerRef.current = polylineRef.current.addListener("click", (e: google.maps.MapMouseEvent) => { e.stop(); onClick(); });
-    return () => {
-      listenerRef.current?.remove();
-      polylineRef.current?.setMap(null);
-    };
+    polylineRef.current = new mapsLib.Polyline({ path, strokeColor: color, strokeOpacity: opacity, strokeWeight: weight, zIndex, map });
+    // e.stop() prevents the click from also bubbling to the map's onClick (which would deselect)
+    listenerRef.current = polylineRef.current.addListener("click", (e: google.maps.MapMouseEvent) => { e.stop(); onClickRef.current(); });
+    return () => { listenerRef.current?.remove(); polylineRef.current?.setMap(null); };
   }, [map, mapsLib]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Update mutable style props without remounting
   useEffect(() => {
     polylineRef.current?.setOptions({ strokeColor: color, strokeOpacity: opacity, strokeWeight: weight, zIndex });
   }, [color, opacity, weight, zIndex]);
 
-  // Update geometry when the same project receives fresh coordinates
   useEffect(() => {
     polylineRef.current?.setPath(path);
   }, [path]);
-
-  // Update click handler — e.stop() prevents the event from also firing the map's onClick (which deselects)
-  useEffect(() => {
-    listenerRef.current?.remove();
-    if (polylineRef.current) {
-      listenerRef.current = polylineRef.current.addListener("click", (e: google.maps.MapMouseEvent) => { e.stop(); onClick(); });
-    }
-  }, [onClick]);
 
   return null;
 }
@@ -96,13 +80,11 @@ function PointMarker({
   position,
   color,
   isSelected,
-  isDeselected,
   onClick,
 }: {
   position: google.maps.LatLngLiteral;
   color: string;
   isSelected: boolean;
-  isDeselected: boolean;
   onClick: () => void;
 }) {
   const marker = mapStyles.marker;
@@ -114,50 +96,17 @@ function PointMarker({
 
   return (
     <AdvancedMarker position={position} onClick={onClick} zIndex={isSelected ? marker.selectedZIndex : marker.zIndex}>
-      <div
-        style={{
-          width: size,
-          height: size,
-          borderRadius: marker.borderRadius,
-          background: color,
-          border,
-          boxShadow,
-          cursor: marker.cursor,
-          opacity: isDeselected ? 0.2 : 1,
-          transition: "opacity 0.2s",
-        }}
-      />
+      <div style={{ width: size, height: size, borderRadius: marker.borderRadius, background: color, border, boxShadow, cursor: marker.cursor }} />
     </AdvancedMarker>
   );
 }
 
 // ─── Segment tooltip ─────────────────────────────────────────────────────────
 
-function SegmentTooltip({
-  position,
-  text,
-}: {
-  position: google.maps.LatLngLiteral;
-  text: string;
-}) {
-  const tooltip = mapStyles.tooltip;
-
+function SegmentTooltip({ position, text }: { position: google.maps.LatLngLiteral; text: string }) {
   return (
-    <AdvancedMarker position={position} zIndex={tooltip.zIndex}>
-      <div
-        style={{
-          background: tooltip.background,
-          borderRadius: tooltip.borderRadius,
-          color: tooltip.color,
-          fontSize: tooltip.fontSize,
-          fontWeight: tooltip.fontWeight,
-          padding: tooltip.padding,
-          pointerEvents: tooltip.pointerEvents,
-          whiteSpace: tooltip.whiteSpace,
-        }}
-      >
-        {text}
-      </div>
+    <AdvancedMarker position={position} zIndex={mapStyles.tooltip.zIndex}>
+      <div className="map-tooltip">{text}</div>
     </AdvancedMarker>
   );
 }
@@ -401,7 +350,6 @@ export function MapView({
               position={{ lat, lng }}
               color={fill}
               isSelected={isSelected}
-              isDeselected={false}
               onClick={onClick}
             />,
           ];

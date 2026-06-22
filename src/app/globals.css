@@ -125,6 +125,18 @@ button:disabled {
   z-index: var(--z-map);
 }
 
+/* Segment label tooltip rendered via AdvancedMarker */
+.map-tooltip {
+  background: rgba(23, 33, 29, 0.88);
+  border-radius: 6px;
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 /* Applied to the Leaflet MapContainer via className prop */
 .map-canvas {
   bottom: 0;

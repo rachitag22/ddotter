@@ -23,14 +23,6 @@ export const colorAlpha = {
   selectedHaloHex: "40",
 } as const;
 
-/** Map marker / polyline fill color keyed by source_type. */
-export const sourceTypeColor: Record<string, string> = {
-  capital_project:  colors.green,
-  bike_lane:        colors.red,
-  trail_project:    colors.blue,
-  art_installation: colors.gold,
-};
-
 /** Human-readable label keyed by source_type. */
 export const sourceTypeLabel: Record<string, string> = {
   capital_project:  "Capital project",
@@ -90,14 +82,6 @@ export const mapStyles = {
     selectedZIndex: 10,
   },
   tooltip: {
-    background: "rgba(23,33,29,0.88)",
-    borderRadius: 6,
-    color: colors.white,
-    fontSize: 12,
-    fontWeight: 500,
-    padding: "4px 8px",
-    pointerEvents: "none",
-    whiteSpace: "nowrap",
     zIndex: 20,
   },
   polyline: {
