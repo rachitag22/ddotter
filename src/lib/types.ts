@@ -6,7 +6,7 @@ export type Geometry =
   | { type: "LineString"; coordinates: [number, number][] }
   | { type: "MultiLineString"; coordinates: [number, number][][] };
 
-export type FeatureRecord = {
+export type ProjectRecord = {
   id: string;
   source_type: SourceType;
   source_id: string;
@@ -30,7 +30,7 @@ export type FeatureRecord = {
   support_percent?: number;
 };
 
-export type FeatureFilters = {
+export type ProjectFilters = {
   type?: string;
   ward?: string;
   status?: string;
@@ -39,7 +39,7 @@ export type FeatureFilters = {
 
 // Slim projection used in the drawer list — excludes raw ArcGIS JSON and
 // geometry coordinates which are only needed by the map renderer.
-export type ListFeatureRecord = Omit<FeatureRecord, "raw" | "geometry">;
+export type ListProjectRecord = Omit<ProjectRecord, "raw" | "geometry">;
 
 export type FeedbackPayload = {
   support: boolean;

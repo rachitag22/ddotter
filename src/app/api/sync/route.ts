@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { fetchArtInstallations, fetchBikeLanes, fetchCapitalProjects, fetchTrailProjects } from "@/lib/arcgis";
 import { hasSupabaseConfig } from "@/lib/supabase";
 import { getSupabaseSyncClient } from "@/lib/supabase";
-import type { FeatureRecord, SourceType } from "@/lib/types";
+import type { ProjectRecord, SourceType } from "@/lib/types";
 
 function errorMessage(error: unknown) {
   if (error instanceof Error) return error.message;
@@ -17,7 +17,7 @@ function errorMessage(error: unknown) {
 
 async function preserveEnrichedDescriptions(
   supabase: ReturnType<typeof getSupabaseSyncClient>,
-  records: FeatureRecord[],
+  records: ProjectRecord[],
 ) {
   const descriptions = new Map<string, string>();
   const chunkSize = 500;
@@ -42,14 +42,14 @@ async function preserveEnrichedDescriptions(
   });
 }
 
-async function syncSource(sourceType: SourceType, getRecords: () => Promise<FeatureRecord[]>) {
+async function syncSource(sourceType: SourceType, getRecords: () => Promise<ProjectRecord[]>) {
   const startedAt = new Date().toISOString();
   const supabase = getSupabaseSyncClient();
 
   try {
     const fetchedRecords = await getRecords();
     const dedupedRecords = Array.from(
-      fetchedRecords.reduce((byId, record) => byId.set(record.id, record), new Map<string, FeatureRecord>()).values(),
+      fetchedRecords.reduce((byId, record) => byId.set(record.id, record), new Map<string, ProjectRecord>()).values(),
     );
     const records = await preserveEnrichedDescriptions(supabase, dedupedRecords);
 

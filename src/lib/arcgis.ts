@@ -1,4 +1,4 @@
-import type { FeatureRecord, Geometry, ProjectStatus, SourceType } from "@/lib/types";
+import type { ProjectRecord, Geometry, ProjectStatus, SourceType } from "@/lib/types";
 import { cleanSegmentLabels } from "@/lib/enrich";
 
 type ArcGisFeature = {
@@ -87,7 +87,7 @@ function normalizeStatus(value: unknown): ProjectStatus {
   return "unknown";
 }
 
-function normalizeCapitalProject(feature: ArcGisFeature): FeatureRecord | null {
+function normalizeCapitalProject(feature: ArcGisFeature): ProjectRecord | null {
   const raw = feature.properties;
   const objectId = asString(raw.OBJECTID);
   const name = asString(raw.ProjectName) ?? asString(raw.Label);
@@ -113,7 +113,7 @@ function normalizeCapitalProject(feature: ArcGisFeature): FeatureRecord | null {
   };
 }
 
-function normalizeBikeLane(feature: ArcGisFeature): FeatureRecord | null {
+function normalizeBikeLane(feature: ArcGisFeature): ProjectRecord | null {
   const raw = feature.properties;
   const objectId = asString(raw.ObjectID);
   const label = asString(raw.Label);
@@ -147,7 +147,7 @@ function normalizeBikeLane(feature: ArcGisFeature): FeatureRecord | null {
   };
 }
 
-function normalizeExistingTrail(feature: ArcGisFeature): FeatureRecord | null {
+function normalizeExistingTrail(feature: ArcGisFeature): ProjectRecord | null {
   const raw = feature.properties;
   const objectId = asString(raw.OBJECTID);
   const name = asString(raw.TRAIL_NAME) ?? asString(raw.NAME);
@@ -179,7 +179,7 @@ function normalizeExistingTrail(feature: ArcGisFeature): FeatureRecord | null {
   };
 }
 
-function normalizePlannedTrail(feature: ArcGisFeature): FeatureRecord | null {
+function normalizePlannedTrail(feature: ArcGisFeature): ProjectRecord | null {
   const raw = feature.properties;
   const objectId = asString(raw.OBJECTID);
   const name = asString(raw.TRAIL_NAME) ?? asString(raw.ALETERNATE_NAME);
@@ -210,7 +210,7 @@ function normalizePlannedTrail(feature: ArcGisFeature): FeatureRecord | null {
   };
 }
 
-function normalizePublicArt(feature: ArcGisFeature): FeatureRecord | null {
+function normalizePublicArt(feature: ArcGisFeature): ProjectRecord | null {
   const raw = feature.properties;
   const objectId = asString(pick(raw, "OBJECTID", "DCGIS.PLACE_NAMES_PT.OBJECTID"));
   const name = asString(pick(raw, "TITLE", "ARTWORKNAME", "DCGIS.PLACE_NAMES_PT.NAME"));
@@ -287,7 +287,7 @@ async function fetchArcGisFeatures(url: string, options: { paginate?: boolean } 
 
 export async function fetchCapitalProjects() {
   const features = await fetchArcGisFeatures(CAPITAL_PROJECTS_URL);
-  return features.map(normalizeCapitalProject).filter((feature): feature is FeatureRecord => Boolean(feature));
+  return features.map(normalizeCapitalProject).filter((feature): feature is ProjectRecord => Boolean(feature));
 }
 
 export async function fetchBikeLanes(options: { labelLimit?: number } = {}) {
@@ -377,7 +377,7 @@ export async function fetchBikeLanes(options: { labelLimit?: number } = {}) {
     }
   }
 
-  return merged.map(normalizeBikeLane).filter((feature): feature is FeatureRecord => Boolean(feature));
+  return merged.map(normalizeBikeLane).filter((feature): feature is ProjectRecord => Boolean(feature));
 }
 
 export async function fetchTrailProjects() {
@@ -389,12 +389,12 @@ export async function fetchTrailProjects() {
   return [
     ...existingTrails.map(normalizeExistingTrail),
     ...plannedTrails.map(normalizePlannedTrail),
-  ].filter((feature): feature is FeatureRecord => Boolean(feature));
+  ].filter((feature): feature is ProjectRecord => Boolean(feature));
 }
 
 export async function fetchArtInstallations() {
   const features = await fetchArcGisFeatures(PUBLIC_ART_URL, { paginate: false });
-  return features.map(normalizePublicArt).filter((feature): feature is FeatureRecord => Boolean(feature));
+  return features.map(normalizePublicArt).filter((feature): feature is ProjectRecord => Boolean(feature));
 }
 
 export async function fetchAllArcGisFeatures() {

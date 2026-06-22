@@ -1,30 +1,30 @@
 import { unstable_cache } from "next/cache";
-import { sampleFeatures } from "@/lib/sample-data";
+import { sampleProjects } from "@/lib/sample-data";
 import { getSupabaseServerClient, hasSupabaseConfig } from "@/lib/supabase";
-import type { FeatureFilters, FeatureRecord } from "@/lib/types";
+import type { ProjectFilters, ProjectRecord } from "@/lib/types";
 
-function matchesFilters(feature: FeatureRecord, filters: FeatureFilters) {
+function matchesFilters(project: ProjectRecord, filters: ProjectFilters) {
   if (filters.type) {
-    if (feature.source_type !== filters.type) return false;
-  } else if (feature.source_type === "art_installation") {
+    if (project.source_type !== filters.type) return false;
+  } else if (project.source_type === "art_installation") {
     return false;
   }
-  if (filters.ward && feature.ward !== filters.ward) return false;
+  if (filters.ward && project.ward !== filters.ward) return false;
   if (filters.status) {
     const statuses = filters.status.split(",");
-    if (!statuses.includes(feature.status)) return false;
+    if (!statuses.includes(project.status)) return false;
   }
 
   if (filters.q) {
     const query = filters.q.toLowerCase();
-    const haystack = `${feature.name} ${feature.description ?? ""} ${feature.mode ?? ""}`.toLowerCase();
+    const haystack = `${project.name} ${project.description ?? ""} ${project.mode ?? ""}`.toLowerCase();
     if (!haystack.includes(query)) return false;
   }
 
   return true;
 }
 
-export function getFiltersFromSearchParams(searchParams: URLSearchParams): FeatureFilters {
+export function getFiltersFromSearchParams(searchParams: URLSearchParams): ProjectFilters {
   return {
     type: searchParams.get("type") || undefined,
     ward: searchParams.get("ward") || undefined,
@@ -33,10 +33,10 @@ export function getFiltersFromSearchParams(searchParams: URLSearchParams): Featu
   };
 }
 
-async function fetchFeatures(filters: FeatureFilters): Promise<FeatureRecord[]> {
+async function fetchProjects(filters: ProjectFilters): Promise<ProjectRecord[]> {
   const supabase = getSupabaseServerClient();
   const pageSize = 1000;
-  const features: FeatureRecord[] = [];
+  const projects: ProjectRecord[] = [];
 
   for (let from = 0; ; from += pageSize) {
     let query = supabase
@@ -62,30 +62,28 @@ async function fetchFeatures(filters: FeatureFilters): Promise<FeatureRecord[]> 
     const { data, error } = await query;
     if (error) throw error;
 
-    features.push(...((data ?? []) as FeatureRecord[]));
+    projects.push(...((data ?? []) as ProjectRecord[]));
     if (!data || data.length < pageSize) break;
   }
 
-  return features;
+  return projects;
 }
 
-// Cache per unique filter combination; revalidate after each sync run via the
-// "features" tag (call revalidateTag("features") from the sync route).
-const getCachedFeatures = unstable_cache(fetchFeatures, ["features"], {
+const getCachedProjects = unstable_cache(fetchProjects, ["projects"], {
   revalidate: 300,
-  tags: ["features"],
+  tags: ["projects"],
 });
 
-export async function getFeatures(filters: FeatureFilters = {}) {
+export async function getProjects(filters: ProjectFilters = {}) {
   if (!hasSupabaseConfig()) {
-    return sampleFeatures.filter((feature) => matchesFilters(feature, filters));
+    return sampleProjects.filter((project) => matchesFilters(project, filters));
   }
-  return getCachedFeatures(filters);
+  return getCachedProjects(filters);
 }
 
-export async function getFeature(id: string) {
+export async function getProject(id: string) {
   if (!hasSupabaseConfig()) {
-    return sampleFeatures.find((feature) => feature.id === id) ?? null;
+    return sampleProjects.find((project) => project.id === id) ?? null;
   }
 
   const supabase = getSupabaseServerClient();
@@ -96,24 +94,24 @@ export async function getFeature(id: string) {
     .maybeSingle();
 
   if (error) throw error;
-  return data as FeatureRecord | null;
+  return data as ProjectRecord | null;
 }
 
-export function toGeoJson(features: FeatureRecord[]) {
+export function toGeoJson(projects: ProjectRecord[]) {
   return {
     type: "FeatureCollection",
-    features: features.map((feature) => ({
+    features: projects.map((project) => ({
       type: "Feature",
-      id: feature.id,
-      geometry: feature.geometry,
+      id: project.id,
+      geometry: project.geometry,
       properties: {
-        name: feature.name,
-        source_type: feature.source_type,
-        status: feature.status,
-        ward: feature.ward,
-        mode: feature.mode,
-        feedback_count: feature.feedback_count ?? 0,
-        support_percent: feature.support_percent ?? 0,
+        name: project.name,
+        source_type: project.source_type,
+        status: project.status,
+        ward: project.ward,
+        mode: project.mode,
+        feedback_count: project.feedback_count ?? 0,
+        support_percent: project.support_percent ?? 0,
       },
     })),
   };

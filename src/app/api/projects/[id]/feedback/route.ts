@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { feedbackSchema, getFeedbackAggregate } from "@/lib/feedback";
-import { getFeature } from "@/lib/features";
+import { getProject } from "@/lib/projects";
 import { getSupabaseServerClient, hasSupabaseConfig } from "@/lib/supabase";
 
 type RouteContext = {
@@ -14,10 +14,10 @@ export async function GET(_: Request, context: RouteContext) {
 
 export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params;
-  const feature = await getFeature(id);
+  const project = await getProject(id);
 
-  if (!feature) {
-    return NextResponse.json({ error: "Feature not found" }, { status: 404 });
+  if (!project) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
   const body = await request.json().catch(() => null);
