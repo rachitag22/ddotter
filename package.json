@@ -10,6 +10,9 @@
     "enrich": "node scripts/enrich.mjs",
     "enrich:local": "node scripts/enrich.mjs --local",
     "enrich:prod": "node scripts/enrich.mjs --prod",
+    "scrape": "node scripts/scrape.mjs",
+    "scrape:local": "node scripts/scrape.mjs --local",
+    "scrape:prod": "node scripts/scrape.mjs --prod",
     "lint": "next lint"
   },
   "dependencies": {

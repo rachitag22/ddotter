@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { FeedbackForm } from "@/components/FeedbackForm";
+import { ProjectAssets } from "@/components/ProjectAssets";
 import { sourceTypeLabel } from "@/lib/design";
 import { buildCloseUrl, buildSelectedUrl } from "@/lib/url";
-import type { ListProjectRecord, ProjectFilters } from "@/lib/types";
+import type { ListProjectRecord, ProjectAsset, ProjectFilters } from "@/lib/types";
 
 type DrawerState = "peek" | "half" | "full" | "preview";
 
@@ -35,11 +36,13 @@ export function BottomDrawer({
   filters,
   selectedId,
   selectedFeature,
+  selectedAssets = [],
 }: {
   features: ListProjectRecord[];
   filters: ProjectFilters;
   selectedId?: string;
   selectedFeature?: ListProjectRecord | null;
+  selectedAssets?: ProjectAsset[];
 }) {
   const isDetail = !!selectedFeature;
   const [snapState, setSnapState] = useState<DrawerState>(isDetail ? "preview" : "peek");
@@ -203,6 +206,7 @@ export function BottomDrawer({
                 View on DDOT website ↗
               </a>
             )}
+            <ProjectAssets assets={selectedAssets} />
             <FeedbackForm featureId={selectedFeature.id} />
             <p className="drawer-permalink">
               <Link href={`/projects/${selectedFeature.id}`}>Permanent link ↗</Link>

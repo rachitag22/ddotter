@@ -41,6 +41,18 @@ export type ProjectFilters = {
 // geometry coordinates which are only needed by the map renderer.
 export type ListProjectRecord = Omit<ProjectRecord, "raw" | "geometry">;
 
+export type AssetType = "document" | "photo" | "video" | "map" | "link";
+
+export type ProjectAsset = {
+  id: string;
+  project_id: string;
+  asset_type: AssetType;
+  url: string;
+  title: string | null;
+  file_type: string | null;
+  scraped_at: string;
+};
+
 export type FeedbackPayload = {
   support: boolean;
   comment: string;

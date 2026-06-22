@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FeedbackForm } from "@/components/FeedbackForm";
+import { ProjectAssets } from "@/components/ProjectAssets";
 import { SegmentList } from "@/components/SegmentList";
 import { sourceTypeLabel } from "@/lib/design";
-import { getProject } from "@/lib/projects";
+import { getProject, getProjectAssets } from "@/lib/projects";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -11,7 +12,7 @@ type PageProps = {
 
 export default async function ProjectDetail({ params }: PageProps) {
   const { id } = await params;
-  const project = await getProject(id);
+  const [project, assets] = await Promise.all([getProject(id), getProjectAssets(id)]);
 
   if (!project) notFound();
 
@@ -58,6 +59,7 @@ export default async function ProjectDetail({ params }: PageProps) {
             View on DDOT website ↗
           </a>
         )}
+        <ProjectAssets assets={assets} />
         <FeedbackForm featureId={project.id} />
       </article>
     </main>
