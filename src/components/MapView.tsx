@@ -242,6 +242,7 @@ function DcGreyOverlay() {
       fillColor: "#9ba3ad",
       fillOpacity: 0.45,
       strokeWeight: 0,
+      clickable: false,
       map,
     });
     return () => {
