@@ -43,7 +43,7 @@ async function handleEnrich(request: Request) {
   const supabase = getSupabaseSyncClient();
 
   let query = supabase
-    .from("features")
+    .from("projects")
     .select("id, name, source_type, official_url, description, ward, mode, status, timeline_start, timeline_end, cost, raw, last_enrichment_attempted_at")
     .in("source_type", targetTypes)
     .order("source_type");
@@ -85,7 +85,7 @@ async function handleEnrich(request: Request) {
           enrichment_error: r.error ?? null,
           ...(r.updated && r.description ? { description: r.description } : {}),
         };
-        return supabase.from("features").update(patch).eq("id", r.id);
+        return supabase.from("projects").update(patch).eq("id", r.id);
       }),
     );
   }

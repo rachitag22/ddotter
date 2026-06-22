@@ -25,7 +25,7 @@ async function preserveEnrichedDescriptions(
   for (let i = 0; i < records.length; i += chunkSize) {
     const ids = records.slice(i, i + chunkSize).map((record) => record.id);
     const { data, error } = await supabase
-      .from("features")
+      .from("projects")
       .select("id, description")
       .in("id", ids)
       .not("last_enriched_at", "is", null);
@@ -55,7 +55,7 @@ async function syncSource(sourceType: SourceType, getRecords: () => Promise<Proj
 
     if (records.length) {
       const { error: upsertError } = await supabase
-        .from("features")
+        .from("projects")
         .upsert(records, { onConflict: "id" });
       if (upsertError) throw upsertError;
 
@@ -63,7 +63,7 @@ async function syncSource(sourceType: SourceType, getRecords: () => Promise<Proj
       // Current records get a fresh synced_at, which avoids sending thousands
       // of IDs through a PostgREST filter for larger sources.
       const { error: deleteError } = await supabase
-        .from("features")
+        .from("projects")
         .delete()
         .eq("source_type", sourceType)
         .lt("synced_at", startedAt);
