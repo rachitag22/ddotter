@@ -1,5 +1,12 @@
-import { anthropic } from "@ai-sdk/anthropic";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
+
+// SDK v3 default export routes through Vercel AI Gateway; use createAnthropic
+// with explicit credentials so both local and Vercel prod paths work.
+const anthropic = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  baseURL: "https://api.anthropic.com/v1",
+});
 import { fetchHtmlWithBrowser, needsBrowser } from "@/lib/browser";
 
 function decodeHtml(value: string) {

@@ -36,7 +36,10 @@ export async function fetchHtmlWithBrowser(url: string): Promise<string | null> 
     try {
       const ctx = browser.contexts()[0];
       const page = ctx.pages()[0] ?? (await ctx.newPage());
-      await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
+      // ArcGIS Hub and other SPAs never reach networkidle; use load + small
+      // fixed delay to let the initial JS render complete.
+      await page.goto(url, { waitUntil: "load", timeout: 30_000 });
+      await page.waitForTimeout(3_000);
       return await page.content();
     } finally {
       await browser.close();

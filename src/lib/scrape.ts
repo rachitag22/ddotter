@@ -15,6 +15,7 @@ function classifyAsset(url: string, title: string | null): { asset_type: AssetTy
   if (/remix\.com|arcgis\.com\/apps\/(webappviewer|mapviewer|instant|dashboards)/i.test(lower)) {
     return { asset_type: "map", file_type: null };
   }
+  if (/app\.box\.com\/s\//i.test(lower)) return { asset_type: "document", file_type: null };
 
   // Title-based hints when URL is ambiguous
   if (title) {
@@ -79,6 +80,13 @@ const SKIP_PHOTO_PATTERNS = [
   /\/themes\//,              // theme/template assets
   /Instagramlogo/i,          // social media logos
   /\+rawURL\+/,              // broken template URLs
+  /raw\.githubusercontent\.com\/Esri\//,  // Esri calcite UI icons
+];
+
+// Patterns that are always skipped regardless of asset type
+const ALWAYS_SKIP_PATTERNS = [
+  /arcgis\.com\/sharing\/rest\/oauth2/,      // ArcGIS sign-in flow
+  /\.ddot\.dc\.gov\/search\?collection=/,    // Hub generic search pages
 ];
 
 function isNavLink(url: string): boolean {
@@ -110,6 +118,7 @@ export function extractAssets(html: string, baseUrl: string): RawAsset[] {
     const title = anchorHtml.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || null;
     const { asset_type, file_type } = classifyAsset(resolved, title);
 
+    if (ALWAYS_SKIP_PATTERNS.some((re) => re.test(resolved))) continue;
     // Drop generic nav/footer links unless they're a typed asset (doc/video/map)
     if (asset_type === "link" && isNavLink(resolved)) continue;
 
