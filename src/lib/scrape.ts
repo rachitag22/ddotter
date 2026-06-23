@@ -1,4 +1,5 @@
 import type { AssetType, ProjectAsset } from "@/lib/types";
+import { fetchHtmlWithBrowser, needsBrowser } from "@/lib/browser";
 
 type RawAsset = { url: string; title: string | null; asset_type: AssetType; file_type: string | null };
 
@@ -136,22 +137,33 @@ export function extractAssets(html: string, baseUrl: string): RawAsset[] {
   return assets;
 }
 
-export async function scrapeProjectPage(
-  project: { id: string; official_url: string },
-): Promise<Omit<ProjectAsset, "id" | "scraped_at">[]> {
-  let html: string;
+async function fetchHtml(url: string): Promise<string | null> {
+  // For known JS-rendered domains, skip the static fetch entirely.
+  if (needsBrowser(url)) return fetchHtmlWithBrowser(url);
+
   try {
-    const res = await fetch(project.official_url, {
+    const res = await fetch(url, {
       headers: { "User-Agent": "DDOT Advocacy Map / project asset indexer" },
       signal: AbortSignal.timeout(10_000),
     });
-    if (!res.ok) return [];
-    html = await res.text();
+    if (!res.ok) return null;
+    const html = await res.text();
+    // Thin-content guard: if the page returned very few links it's probably
+    // a JS shell — retry with a real browser.
+    const linkCount = (html.match(/<a\s/gi) ?? []).length;
+    if (linkCount < 3) return (await fetchHtmlWithBrowser(url)) ?? html;
+    return html;
   } catch {
-    return [];
+    return null;
   }
+}
 
-  // Thin-content guard (JS-rendered pages); Browserbase fallback is future work
+export async function scrapeProjectPage(
+  project: { id: string; official_url: string },
+): Promise<Omit<ProjectAsset, "id" | "scraped_at">[]> {
+  const html = await fetchHtml(project.official_url);
+  if (!html) return [];
+
   const bodyText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
   if (bodyText.length < 300) return [];
 

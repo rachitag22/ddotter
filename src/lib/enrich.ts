@@ -1,5 +1,6 @@
 import { anthropic } from "@ai-sdk/anthropic";
 import { generateText } from "ai";
+import { fetchHtmlWithBrowser, needsBrowser } from "@/lib/browser";
 
 function decodeHtml(value: string) {
   return value
@@ -27,7 +28,24 @@ function extractMetaText(html: string) {
   return [...values].join(". ");
 }
 
+function htmlToText(html: string): string {
+  const metaText = extractMetaText(html);
+  const bodyText = html
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return [metaText, bodyText].filter(Boolean).join("\n").slice(0, 6000);
+}
+
 export async function fetchPageText(url: string): Promise<string | null> {
+  // For JS-rendered domains, go straight to the browser.
+  if (needsBrowser(url)) {
+    const html = await fetchHtmlWithBrowser(url);
+    return html ? htmlToText(html) : null;
+  }
+
   try {
     const res = await fetch(url, {
       headers: { "User-Agent": "DDOT Advocacy Map / description enrichment" },
@@ -35,14 +53,10 @@ export async function fetchPageText(url: string): Promise<string | null> {
     });
     if (!res.ok) return null;
     const html = await res.text();
-    const metaText = extractMetaText(html);
-    const bodyText = html
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
-    return [metaText, bodyText].filter(Boolean).join("\n").slice(0, 6000);
+    const text = htmlToText(html);
+    // If the page looks like a JS shell, retry with a real browser.
+    if (text.length < 500) return (await fetchHtmlWithBrowser(url).then((h) => h ? htmlToText(h) : null)) ?? null;
+    return text;
   } catch {
     return null;
   }
