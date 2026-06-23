@@ -1,3 +1,4 @@
+import { FacilityTypeInfo } from "@/components/FacilityTypeInfo";
 import type { ProjectRecord } from "@/lib/types";
 
 type RawSegment = { facility: string | null; label: string | null };
@@ -20,7 +21,7 @@ export function SegmentList({ project }: { project: ProjectRecord }) {
 
   return (
     <section className="segment-list">
-      <h2>Segments ({raw.length})</h2>
+      <h2>Segments ({raw.length}) <FacilityTypeInfo /></h2>
       <ul>
         {raw.map((seg, i) => (
           <li key={i}>

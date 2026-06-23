@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FeedbackForm } from "@/components/FeedbackForm";
 import { ProjectAssets } from "@/components/ProjectAssets";
 import { SegmentList } from "@/components/SegmentList";
 import { sourceTypeLabel } from "@/lib/design";
@@ -41,13 +40,6 @@ export default async function ProjectDetail({ params }: PageProps) {
             <h2>Estimated cost</h2>
             <p>{project.cost ? `$${project.cost.toLocaleString()}` : "TBD"}</p>
           </section>
-          <section>
-            <h2>Community signal</h2>
-            <p>
-              {project.feedback_count ?? 0} responses
-              {project.support_percent ? `, ${project.support_percent}% support` : ""}
-            </p>
-          </section>
         </div>
         {project.official_url && (
           <a
@@ -60,7 +52,6 @@ export default async function ProjectDetail({ params }: PageProps) {
           </a>
         )}
         <ProjectAssets assets={assets} />
-        <FeedbackForm featureId={project.id} />
       </article>
     </main>
   );

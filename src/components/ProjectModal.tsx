@@ -2,21 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FeedbackForm } from "@/components/FeedbackForm";
 import { SegmentList } from "@/components/SegmentList";
 import { sourceTypeLabel } from "@/lib/design";
 import { buildCloseUrl } from "@/lib/url";
-import type { ProjectFilters, ProjectRecord } from "@/lib/types";
+import type { ProjectRecord } from "@/lib/types";
 
 export function ProjectModal({
   project,
-  filters,
 }: {
   project: ProjectRecord;
-  filters: ProjectFilters;
 }) {
   const router = useRouter();
-  const closeUrl = buildCloseUrl(filters);
+  const closeUrl = buildCloseUrl();
 
   return (
     <div
@@ -48,13 +45,6 @@ export function ProjectModal({
             <h2>Estimated cost</h2>
             <p>{project.cost ? `$${project.cost.toLocaleString()}` : "TBD"}</p>
           </section>
-          <section>
-            <h2>Community signal</h2>
-            <p>
-              {project.feedback_count ?? 0} responses
-              {project.support_percent ? `, ${project.support_percent}% support` : ""}
-            </p>
-          </section>
         </div>
 
         {project.official_url && (
@@ -67,8 +57,6 @@ export function ProjectModal({
             View on DDOT website ↗
           </a>
         )}
-
-        <FeedbackForm featureId={project.id} />
 
         <p className="modal-permalink">
           <Link href={`/projects/${project.id}`}>Permanent link ↗</Link>

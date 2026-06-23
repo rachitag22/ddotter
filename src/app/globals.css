@@ -11,6 +11,13 @@
   --gold:   #b26a00;
   --blue:   #2767b1;
   --red:    #b42318;
+  --teal:   #0891b2;
+  --cyan:   #06b6d4;
+  --purple: #7c3aed;
+  --orange: #c2410c;
+  --mint:   #1db87a;
+  --gray:   #9ca3af;
+  --white:  #ffffff;
   --text:   #17211d;
   --muted:  #5c6862;
   --line:   #dfe6e1;
@@ -22,6 +29,8 @@
   --gold-tint:    #fff3df;
   --blue-tint:    #e6f3ff;
   --neutral-tint: #edf3ef;
+  --map-loading-start: #dce9e2;
+  --map-loading-end:   #f0eedf;
 
   /* Border radius scale */
   --r-xs:   4px;
@@ -44,6 +53,7 @@
   /* Shadows */
   --shadow-sm:     0 1px 4px rgb(0 0 0 / 8%);
   --shadow-drawer: 0 -4px 32px rgb(0 0 0 / 14%);
+  --shadow-sidebar: 2px 0 20px rgb(0 0 0 / 10%);
 
   /* Z-index layers */
   --z-map:    0;
@@ -109,10 +119,41 @@ button:disabled {
 
 /* Placeholder shown while the Leaflet bundle loads */
 .map-loading {
-  background: linear-gradient(135deg, #dce9e2, #f0eedf);
+  background: linear-gradient(135deg, var(--map-loading-start), var(--map-loading-end));
   inset: 0;
   position: fixed;
   z-index: var(--z-map);
+}
+
+/* Segment label tooltip rendered via AdvancedMarker */
+.map-tooltip {
+  background: rgba(23, 33, 29, 0.88);
+  border-radius: 6px;
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 8px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Network segment InfoWindow */
+.network-info-window {
+  display: grid;
+  gap: 2px;
+  min-width: 140px;
+}
+
+.network-info-type {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  margin: 0;
+}
+
+.network-info-meta {
+  color: var(--muted);
+  font-size: var(--t-xs);
+  margin: 0;
 }
 
 /* Applied to the Leaflet MapContainer via className prop */
@@ -124,6 +165,94 @@ button:disabled {
   left: 0;
   z-index: var(--z-map);
 }
+
+.map-test-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.map-test-header {
+  background: var(--text);
+  color: var(--panel);
+  font-size: var(--t-sm);
+  padding: 12px 16px;
+}
+
+.map-test-canvas {
+  flex: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Filter pill bar
+   ───────────────────────────────────────────────────────────────────────── */
+
+.pill-bar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 0 8px;
+}
+
+.pill {
+  align-items: center;
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-pill);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font-size: var(--t-xs);
+  font-weight: 600;
+  gap: 5px;
+  letter-spacing: 0.03em;
+  padding: 5px 11px 5px 8px;
+  transition: background var(--ease-base), border-color var(--ease-base), color var(--ease-base);
+  user-select: none;
+}
+
+.pill:hover:not(:disabled) {
+  border-color: var(--muted);
+  opacity: 1;
+}
+
+.pill-dot {
+  background: var(--line);
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  height: 7px;
+  transition: background var(--ease-base);
+  width: 7px;
+}
+
+/* Active (existing network) — green */
+.pill--active.pill--on {
+  background: #f0fdf4;
+  border-color: #16a34a;
+  color: #15803d;
+}
+
+.pill--active.pill--on .pill-dot { background: #16a34a; }
+
+/* Building — blue */
+.pill--building.pill--on {
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.pill--building.pill--on .pill-dot { background: #2563eb; }
+
+/* Planned — orange */
+.pill--planned.pill--on {
+  background: #fff7ed;
+  border-color: #ea580c;
+  color: #c2410c;
+}
+
+.pill--planned.pill--on .pill-dot { background: #ea580c; }
 
 /* ─────────────────────────────────────────────────────────────────────────
    Bottom drawer
@@ -213,11 +342,6 @@ button:disabled {
   opacity: 1;  /* override the global rule — color change is enough */
 }
 
-.drawer-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
 
 /* ─── Scrollable content ─────────────────────────────────────────────── */
 
@@ -236,7 +360,7 @@ button:disabled {
   /* Sidebar: replace the bottom drawer with a fixed left panel */
   .drawer {
     border-radius: 0;
-    box-shadow: 2px 0 20px rgb(0 0 0 / 10%);
+    box-shadow: var(--shadow-sidebar);
     height: 100dvh;
     right: auto;
     top: 0;
@@ -332,26 +456,6 @@ button:disabled {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Map segment tooltips (facility-type labels on bike lane segments)
-   ───────────────────────────────────────────────────────────────────────── */
-
-.seg-tooltip {
-  background: rgba(23, 33, 29, 0.82);
-  border: none;
-  border-radius: var(--r-pill);
-  box-shadow: none;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  padding: 2px 8px;
-  white-space: nowrap;
-}
-
-.seg-tooltip::before {
-  display: none;
-}
-
 /* ─────────────────────────────────────────────────────────────────────────
    Segment breakdown (bike lanes with mixed facility types)
    ───────────────────────────────────────────────────────────────────────── */
@@ -396,48 +500,6 @@ button:disabled {
   font-size: var(--t-xs);
 }
 
-/* ─────────────────────────────────────────────────────────────────────────
-   Filters inside the drawer
-   ───────────────────────────────────────────────────────────────────────── */
-
-.drawer-filters {
-  border-bottom: 1px solid var(--line);
-  display: grid;
-  gap: 8px;
-  margin-bottom: 14px;
-  padding-bottom: 14px;
-}
-
-.filter-search,
-.filter-select {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  color: var(--text);
-  padding: 9px 12px;
-  transition: border-color var(--ease-base);
-}
-
-.filter-search:focus,
-.filter-select:focus {
-  border-color: var(--green);
-  outline: none;
-}
-
-.filter-search {
-  width: 100%;
-}
-
-.filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.filter-select {
-  flex: 1;
-  min-width: 96px;
-}
 
 /* ─────────────────────────────────────────────────────────────────────────
    Project list (inside drawer)
@@ -454,10 +516,27 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-sm);
+  color: inherit;
+  cursor: pointer;
   display: grid;
   gap: 8px;
   padding: 14px;
-  transition: border-color var(--ease-base);
+  text-decoration: none;
+  transition: border-color var(--ease-base), box-shadow var(--ease-base), transform var(--ease-base);
+}
+
+.project-card:hover {
+  background: var(--green-tint);
+  border-color: var(--green);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 10%);
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.project-card:focus-visible {
+  background: var(--green-tint);
+  border-color: var(--green);
+  box-shadow: 0 0 0 3px var(--green-tint), var(--shadow-sm);
 }
 
 .project-card.selected {
@@ -517,15 +596,15 @@ button:disabled {
 }
 
 .badge.active {
-  background: var(--blue-tint);
+  background: #eff6ff;
   border-color: transparent;
-  color: var(--blue);
+  color: #1d4ed8;
 }
 
 .badge.planned {
-  background: var(--gold-tint);
+  background: #fff7ed;
   border-color: transparent;
-  color: var(--gold);
+  color: #c2410c;
 }
 
 .badge.complete {
@@ -710,52 +789,134 @@ button:disabled {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
-   Leaflet overrides
+   Facility type info — ⓘ button + dialog
    ───────────────────────────────────────────────────────────────────────── */
 
-.leaflet-container {
-  font-family: inherit;
+.info-btn {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  opacity: 0.7;
+  padding: 0 2px;
+  transition: opacity var(--ease-base);
+  vertical-align: middle;
 }
 
-/* Shorten zoom animation from Leaflet's default 0.25 s so the CSS-scaled
-   frame (the source of perceived blur) is visible for less time. */
-.leaflet-zoom-anim .leaflet-zoom-animated {
-  transition-duration: 0.15s;
+.info-btn:hover {
+  opacity: 1;
 }
 
-.leaflet-popup-content-wrapper {
-  border-radius: var(--r-md) !important;
-  box-shadow: var(--shadow-drawer) !important;
-  padding: 0 !important;
+.facility-dialog {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: 0 8px 40px rgb(0 0 0 / 20%);
+  max-height: 80dvh;
+  max-width: 420px;
+  overflow-y: auto;
+  padding: 0;
+  width: calc(100% - 48px);
 }
 
-.leaflet-popup-content {
-  margin: 0 !important;
-  width: auto !important;
+.facility-dialog::backdrop {
+  background: rgb(0 0 0 / 45%);
 }
 
-.map-popup {
-  display: grid;
-  gap: 8px;
-  padding: 14px 16px;
+.facility-dialog-header {
+  align-items: center;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 20px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
-.map-popup-name {
-  color: var(--text);
-  font-size: var(--t-sm);
-  font-weight: 600;
-  line-height: 1.35;
+.facility-dialog-header h2 {
+  font-size: var(--t-base);
+  font-weight: 700;
   margin: 0;
 }
 
-.map-popup-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+.facility-dialog-close {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 2px 4px;
+  transition: color var(--ease-base);
 }
 
-.map-popup-link {
-  color: var(--green);
+.facility-dialog-close:hover {
+  color: var(--text);
+  opacity: 1;
+}
+
+.facility-dialog-body {
+  padding: 8px 0 16px;
+}
+
+.facility-type-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+  padding: 9px 20px;
+}
+
+.facility-type-row.child {
+  padding-left: 48px;
+  position: relative;
+}
+
+.facility-type-row.child::before {
+  border-bottom: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  content: "";
+  height: 14px;
+  left: 30px;
+  position: absolute;
+  top: 14px;
+  width: 8px;
+}
+
+.facility-type-icon {
+  border-radius: var(--r-xs);
+  display: block;
+  flex-shrink: 0;
+  height: 20px;
+  margin-top: 1px;
+  width: 20px;
+}
+
+.facility-type-text {
+  display: grid;
+  gap: 2px;
+}
+
+.facility-type-label {
   font-size: var(--t-sm);
-  font-weight: 500;
+  font-weight: 600;
+}
+
+.facility-type-desc {
+  color: var(--muted);
+  font-size: var(--t-xs);
+  line-height: 1.5;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Google Maps overrides
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Push Google's logo / attribution out of the way of the bottom drawer */
+.gm-style .gmnoprint,
+.gm-style .gm-bundled-control {
+  bottom: 24px !important;
 }

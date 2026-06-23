@@ -25,9 +25,6 @@ export type ProjectRecord = {
   last_enrichment_attempted_at?: string | null;
   last_enriched_at?: string | null;
   enrichment_error?: string | null;
-  feedback_count?: number;
-  support_count?: number;
-  support_percent?: number;
 };
 
 export type ProjectFilters = {
@@ -53,9 +50,50 @@ export type ProjectAsset = {
   scraped_at: string;
 };
 
-export type FeedbackPayload = {
-  support: boolean;
-  comment: string;
-  name?: string;
-  email?: string;
+// ─── Pill filter state ───────────────────────────────────────────────────────
+
+export type PillState = {
+  active: boolean;   // show existing bike_network segments (status='existing')
+  building: boolean; // show active DDOT projects (status='active')
+  planned: boolean;  // show planned DDOT projects (status='planned')
+};
+
+// ─── Bike network ────────────────────────────────────────────────────────────
+
+export type BikeNetworkSource =
+  | "bike_lane_inventory"
+  | "bike_trail"
+  | "planned_trail";
+
+export type FacilityType =
+  | "protected"
+  | "dual_protected"
+  | "buffered"
+  | "dual_buffered"
+  | "conventional"
+  | "contraflow"
+  | "sharrow"
+  | "shared_path"
+  | "trail"
+  | "unknown";
+
+export type BikeNetworkStatus =
+  | "existing"
+  | "planned"
+  | "under_construction"
+  | "future"
+  | "complete"
+  | "unknown";
+
+export type BikeSegment = {
+  id: string;
+  source: BikeNetworkSource;
+  name: string;
+  facility_type: FacilityType;
+  status: BikeNetworkStatus;
+  ward: string | null;
+  length_m: number | null;
+  geometry: Geometry;
+  raw: Record<string, unknown>;
+  synced_at: string;
 };

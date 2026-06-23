@@ -2,13 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { FeedbackForm } from "@/components/FeedbackForm";
 import { ProjectAssets } from "@/components/ProjectAssets";
+import { FacilityTypeInfo } from "@/components/FacilityTypeInfo";
 import { sourceTypeLabel } from "@/lib/design";
 import { buildCloseUrl, buildSelectedUrl } from "@/lib/url";
-import type { ListProjectRecord, ProjectAsset, ProjectFilters } from "@/lib/types";
+import type { ListProjectRecord, PillState, ProjectAsset } from "@/lib/types";
 
 type DrawerState = "peek" | "half" | "full" | "preview";
+
+const STATUS_LABEL: Record<string, string> = {
+  active: "Building",
+  planned: "Planned",
+};
 
 function computeTranslateY(state: DrawerState, isDetail: boolean): number {
   if (typeof window === "undefined") return 0;
@@ -33,13 +38,15 @@ function snapFromTranslateY(ty: number, drawerH: number, isDetail: boolean): Dra
 
 export function BottomDrawer({
   features,
-  filters,
+  pills,
+  onPillChange,
   selectedId,
   selectedFeature,
   selectedAssets = [],
 }: {
   features: ListProjectRecord[];
-  filters: ProjectFilters;
+  pills: PillState;
+  onPillChange: (next: PillState) => void;
   selectedId?: string;
   selectedFeature?: ListProjectRecord | null;
   selectedAssets?: ProjectAsset[];
@@ -60,14 +67,12 @@ export function BottomDrawer({
     setSnapState(newState);
   }
 
-  // Snap to the right state whenever the selected project changes
   useEffect(() => {
     applySnap(selectedFeature ? "preview" : "peek", !!selectedFeature);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFeature?.id]);
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    // Let clicks on links and buttons propagate normally — don't capture their pointer.
     if ((e.target as HTMLElement).closest("a, button")) return;
     const drawer = drawerRef.current;
     if (!drawer) return;
@@ -105,12 +110,7 @@ export function BottomDrawer({
     applySnap(newState);
   }
 
-  const statusCounts = features.reduce<Record<string, number>>((acc, f) => {
-    acc[f.status] = (acc[f.status] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  const closeUrl = buildCloseUrl(filters);
+  const closeUrl = buildCloseUrl();
 
   return (
     <div className="drawer" data-mode={isDetail ? "detail" : "list"} data-state={snapState} ref={drawerRef}>
@@ -138,7 +138,7 @@ export function BottomDrawer({
             </>
           ) : (
             <>
-              <span className="drawer-title">DDOT Advocacy Map</span>
+              <span className="drawer-title">DC Bike Map</span>
               <span className="drawer-count">{features.length.toLocaleString()} projects</span>
               <button
                 aria-label="Toggle project list"
@@ -151,17 +151,35 @@ export function BottomDrawer({
             </>
           )}
         </div>
+
+        {/* Pill filter bar */}
         {!isDetail && (
-          <div className="drawer-badges">
-            {(statusCounts.planned ?? 0) > 0 && (
-              <span className="badge planned">{statusCounts.planned} planned</span>
-            )}
-            {(statusCounts.active ?? 0) > 0 && (
-              <span className="badge active">{statusCounts.active} active</span>
-            )}
-            {(statusCounts.complete ?? 0) > 0 && (
-              <span className="badge complete">{statusCounts.complete} complete</span>
-            )}
+          <div className="pill-bar">
+            <button
+              type="button"
+              className={`pill pill--active${pills.active ? " pill--on" : ""}`}
+              onClick={() => onPillChange({ ...pills, active: !pills.active })}
+            >
+              <span className="pill-dot" />
+              Active
+            </button>
+            <FacilityTypeInfo />
+            <button
+              type="button"
+              className={`pill pill--building${pills.building ? " pill--on" : ""}`}
+              onClick={() => onPillChange({ ...pills, building: !pills.building })}
+            >
+              <span className="pill-dot" />
+              Building
+            </button>
+            <button
+              type="button"
+              className={`pill pill--planned${pills.planned ? " pill--on" : ""}`}
+              onClick={() => onPillChange({ ...pills, planned: !pills.planned })}
+            >
+              <span className="pill-dot" />
+              Planned
+            </button>
           </div>
         )}
       </div>
@@ -171,7 +189,9 @@ export function BottomDrawer({
         {isDetail ? (
           <div className="drawer-detail">
             <div className="meta">
-              <span className={`badge ${selectedFeature.status}`}>{selectedFeature.status}</span>
+              <span className={`badge ${selectedFeature.status}`}>
+                {STATUS_LABEL[selectedFeature.status] ?? selectedFeature.status}
+              </span>
               {selectedFeature.ward && <span className="badge">Ward {selectedFeature.ward}</span>}
               <span className="badge">
                 {selectedFeature.mode ?? sourceTypeLabel[selectedFeature.source_type] ?? selectedFeature.source_type}
@@ -190,13 +210,6 @@ export function BottomDrawer({
                 <h2>Estimated cost</h2>
                 <p>{selectedFeature.cost ? `$${selectedFeature.cost.toLocaleString()}` : "TBD"}</p>
               </section>
-              <section>
-                <h2>Community signal</h2>
-                <p>
-                  {selectedFeature.feedback_count ?? 0} responses
-                  {selectedFeature.support_percent ? `, ${selectedFeature.support_percent}% support` : ""}
-                </p>
-              </section>
             </div>
             {selectedFeature.official_url && (
               <a
@@ -209,90 +222,35 @@ export function BottomDrawer({
               </a>
             )}
             <ProjectAssets assets={selectedAssets} />
-            <FeedbackForm featureId={selectedFeature.id} />
             <p className="drawer-permalink">
               <Link href={`/projects/${selectedFeature.id}`}>Permanent link ↗</Link>
             </p>
           </div>
         ) : (
-          <>
-            <form action="/" className="drawer-filters" method="get">
-              <input
-                className="filter-search"
-                defaultValue={filters.q}
-                name="q"
-                placeholder="Search projects..."
-              />
-              <div className="filter-row">
-                <select
-                  className="filter-select"
-                  defaultValue={filters.type ?? ""}
-                  name="type"
-                  onChange={(e) => (e.target.form as HTMLFormElement).requestSubmit()}
-                >
-                  <option value="">All types</option>
-                  <option value="capital_project">Capital</option>
-                  <option value="bike_lane">Bike lane</option>
-                  <option value="trail_project">Trail</option>
-                </select>
-                <select
-                  className="filter-select"
-                  defaultValue={filters.ward ?? ""}
-                  name="ward"
-                  onChange={(e) => (e.target.form as HTMLFormElement).requestSubmit()}
-                >
-                  <option value="">All wards</option>
-                  {Array.from({ length: 8 }, (_, i) => `${i + 1}`).map((w) => (
-                    <option key={w} value={w}>
-                      Ward {w}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  className="filter-select"
-                  defaultValue={filters.status ?? ""}
-                  name="status"
-                  onChange={(e) => (e.target.form as HTMLFormElement).requestSubmit()}
-                >
-                  <option value="">All statuses</option>
-                  <option value="active,planned">Active + Planned</option>
-                  <option value="active">Active</option>
-                  <option value="planned">Planned</option>
-                  <option value="complete">Complete</option>
-                  <option value="unknown">Unknown</option>
-                </select>
-              </div>
-            </form>
-
-            <div className="project-list">
-              {features.map((project) => (
-                <article
-                  className={`project-card${selectedId === project.id ? " selected" : ""}`}
-                  key={project.id}
-                >
-                  <div className="meta">
-                    <span className={`badge ${project.status}`}>{project.status}</span>
-                    <span className="badge">Ward {project.ward ?? "?"}</span>
-                    <span className="badge">
-                      {project.mode ?? sourceTypeLabel[project.source_type] ?? project.source_type}
-                    </span>
-                  </div>
-                  <h2>{project.name}</h2>
-                  {project.description && <p className="card-desc">{project.description}</p>}
-                  <p className="feedback-stat">
-                    {project.feedback_count ?? 0} responses
-                    {project.support_percent ? `, ${project.support_percent}% support` : ""}
-                  </p>
-                  <Link className="link-button" href={buildSelectedUrl(project.id, filters)}>
-                    View project →
-                  </Link>
-                </article>
-              ))}
-              {features.length === 0 && (
-                <p className="empty-state">No projects match your filters.</p>
-              )}
-            </div>
-          </>
+          <div className="project-list">
+            {features.map((project) => (
+              <Link
+                className={`project-card${selectedId === project.id ? " selected" : ""}`}
+                href={buildSelectedUrl(project.id)}
+                key={project.id}
+              >
+                <div className="meta">
+                  <span className={`badge ${project.status}`}>
+                    {STATUS_LABEL[project.status] ?? project.status}
+                  </span>
+                  {project.ward && <span className="badge">Ward {project.ward}</span>}
+                  <span className="badge">
+                    {project.mode ?? sourceTypeLabel[project.source_type] ?? project.source_type}
+                  </span>
+                </div>
+                <h2>{project.name}</h2>
+                {project.description && <p className="card-desc">{project.description}</p>}
+              </Link>
+            ))}
+            {features.length === 0 && (
+              <p className="empty-state">No projects match your filters.</p>
+            )}
+          </div>
         )}
       </div>
     </div>
