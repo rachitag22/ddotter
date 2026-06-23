@@ -176,30 +176,37 @@ function asStr(v: unknown): string | null {
 export async function enrichRecord(record: EnrichableRecord): Promise<EnrichResult> {
   try {
     if (record.source_type === "bike_lane") {
-      if (!record.official_url) {
-        return { id: record.id, updated: false, description: record.description, error: "missing_official_url" };
-      }
-      const pageText = await fetchPageText(record.official_url);
-      if (!pageText) {
-        return { id: record.id, updated: false, description: null, error: "fetch_failed" };
-      }
       const raw = record.raw ?? {};
-      const details = [
-        record.mode ? `Facility: ${record.mode}` : null,
+      const structuredLines = [
+        record.ward ? `Ward(s): ${record.ward}` : null,
+        record.mode ? `Facility type: ${record.mode}` : null,
         record.status ? `Status: ${record.status}` : null,
-        record.timeline_start ? `Start: ${record.timeline_start}` : null,
-        record.timeline_end ? `End: ${record.timeline_end}` : null,
-        asStr(raw.Description) ? `Source description: ${asStr(raw.Description)}` : null,
-        asStr(raw.ProjectWorkStatus) ? `Project work status: ${asStr(raw.ProjectWorkStatus)}` : null,
+        record.timeline_start ? `Estimated start: ${record.timeline_start}` : null,
+        record.timeline_end ? `Estimated completion: ${record.timeline_end}` : null,
+        asStr(raw.RouteName) ? `Route: ${asStr(raw.RouteName)}` : null,
+        asStr(raw.Description) && asStr(raw.Description) !== record.name
+          ? `Source description: ${asStr(raw.Description)}`
+          : null,
+        asStr(raw.ProjectWorkStatus) ? `Work status: ${asStr(raw.ProjectWorkStatus)}` : null,
         asStr(raw.ProjectSelectionCategory) ? `Selection category: ${asStr(raw.ProjectSelectionCategory)}` : null,
       ].filter((s): s is string => s !== null);
-      const description = await extractDescriptionWithLLM(pageText, record.name, details);
-      return {
-        id: record.id,
-        updated: description !== null,
-        description,
-        error: description === null ? "no_description_extracted" : undefined,
-      };
+
+      if (record.official_url) {
+        const pageText = await fetchPageText(record.official_url);
+        if (pageText) {
+          const description = await extractDescriptionWithLLM(pageText, record.name, structuredLines);
+          return {
+            id: record.id,
+            updated: description !== null,
+            description,
+            error: description === null ? "no_description_extracted" : undefined,
+          };
+        }
+        // URL present but fetch failed — fall through to structured synthesis
+      }
+
+      const description = await synthesizeDescription(record, structuredLines);
+      return { id: record.id, updated: description !== null, description };
     }
 
     if (record.source_type === "capital_project") {
