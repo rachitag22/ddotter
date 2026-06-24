@@ -50,6 +50,13 @@ export type ProjectAsset = {
   scraped_at: string;
 };
 
+export type MapBounds = {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+};
+
 // ─── Pill filter state ───────────────────────────────────────────────────────
 
 export type PillState = {

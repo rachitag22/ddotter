@@ -12,7 +12,7 @@ import {
   plannedColor,
 } from "@/lib/design";
 import { BikeNetworkLayer } from "@/components/BikeNetworkLayer";
-import type { PillState, ProjectRecord } from "@/lib/types";
+import type { MapBounds, PillState, ProjectRecord } from "@/lib/types";
 
 const DC_CENTER = { lat: 38.9072, lng: -77.0369 };
 
@@ -251,6 +251,28 @@ function MapController({ features, selectedId }: { features: ProjectRecord[]; se
   return null;
 }
 
+// ─── Bounds tracker ──────────────────────────────────────────────────────────
+
+function BoundsTracker({ onBoundsChange }: { onBoundsChange: (b: MapBounds) => void }) {
+  const map = useMap();
+  const cbRef = useRef(onBoundsChange);
+  cbRef.current = onBoundsChange;
+
+  useEffect(() => {
+    if (!map) return;
+    const listener = map.addListener("idle", () => {
+      const b = map.getBounds();
+      if (!b) return;
+      const ne = b.getNorthEast();
+      const sw = b.getSouthWest();
+      cbRef.current({ north: ne.lat(), south: sw.lat(), east: ne.lng(), west: sw.lng() });
+    });
+    return () => listener.remove();
+  }, [map]);
+
+  return null;
+}
+
 // ─── Main map ────────────────────────────────────────────────────────────────
 
 function projectColor(status: string): string {
@@ -263,10 +285,12 @@ export function MapView({
   features,
   pills,
   selectedId,
+  onBoundsChange,
 }: {
   features: ProjectRecord[];
   pills: PillState;
   selectedId?: string;
+  onBoundsChange?: (b: MapBounds) => void;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -300,6 +324,7 @@ export function MapView({
       <DcGreyOverlay />
       <BikeNetworkLayer enabled={pills.active} />
       <MapController features={features} selectedId={selectedId} />
+      {onBoundsChange && <BoundsTracker onBoundsChange={onBoundsChange} />}
       {features.flatMap((project) => {
         const isSelected = project.id === selectedId;
         const isDeselected = !!selectedId && !isSelected;

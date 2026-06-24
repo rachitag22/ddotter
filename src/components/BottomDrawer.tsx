@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ProjectAssets } from "@/components/ProjectAssets";
 import { FacilityTypeInfo } from "@/components/FacilityTypeInfo";
 import { sourceTypeLabel } from "@/lib/design";
@@ -58,6 +59,13 @@ export function BottomDrawer({
   const isDetail = !!selectedFeature;
   const [snapState, setSnapState] = useState<DrawerState>(isDetail ? "preview" : "peek");
   const [copied, setCopied] = useState(false);
+  const router = useRouter();
+  const searchRef = useRef<HTMLInputElement>(null);
+  const isDetailRef = useRef(isDetail);
+  isDetailRef.current = isDetail;
+  const snapStateRef = useRef(snapState);
+  snapStateRef.current = snapState;
+  const applySnapRef = useRef<(s: DrawerState, d?: boolean) => void>(() => {});
   const drawerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number; startTranslate: number } | null>(null);
   const translateRef = useRef(0);
@@ -71,11 +79,34 @@ export function BottomDrawer({
     translateRef.current = computeTranslateY(newState, detail);
     setSnapState(newState);
   }
+  applySnapRef.current = applySnap;
 
   useEffect(() => {
     applySnap(selectedFeature ? "preview" : "peek", !!selectedFeature);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFeature?.id]);
+
+  // Keyboard shortcuts: Escape → back/collapse; / → focus search
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement).tagName;
+      const inInput = tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement).isContentEditable;
+      if (e.key === "Escape") {
+        if (isDetailRef.current) {
+          router.push("/");
+        } else if (snapStateRef.current !== "peek") {
+          applySnapRef.current("peek");
+        }
+        return;
+      }
+      if (e.key === "/" && !isDetailRef.current && !inInput) {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [router]);
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     if ((e.target as HTMLElement).closest("a, button")) return;
@@ -198,9 +229,10 @@ export function BottomDrawer({
             </div>
             <div className="drawer-search-wrap">
               <input
+                ref={searchRef}
                 className="drawer-search"
                 type="search"
-                placeholder="Search projects…"
+                placeholder="Search projects… (/)"
                 value={search}
                 onChange={(e) => onSearchChange(e.target.value)}
               />
