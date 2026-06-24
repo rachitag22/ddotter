@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CopyButton } from "@/components/CopyButton";
@@ -9,6 +10,32 @@ import { getProject, getProjectAssets } from "@/lib/projects";
 type PageProps = {
   params: Promise<{ id: string }>;
 };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const project = await getProject(id);
+  if (!project) return { title: "Project not found | DC Bike Map" };
+
+  const typeLabel = sourceTypeLabel[project.source_type] ?? project.source_type;
+  const fallbackDesc = `A DC ${typeLabel} project${project.ward ? ` in Ward ${project.ward}` : ""}.`;
+  const description = project.description ?? fallbackDesc;
+
+  return {
+    title: `${project.name} | DC Bike Map`,
+    description,
+    openGraph: {
+      title: project.name,
+      description,
+      type: "article",
+      url: `/projects/${id}`,
+    },
+    twitter: {
+      card: "summary",
+      title: project.name,
+      description,
+    },
+  };
+}
 
 export default async function ProjectDetail({ params }: PageProps) {
   const { id } = await params;

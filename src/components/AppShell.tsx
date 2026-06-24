@@ -5,7 +5,21 @@ import { useEffect, useState } from "react";
 import { MapWrapper } from "@/components/MapWrapper";
 import { BottomDrawer } from "@/components/BottomDrawer";
 import { getSupabaseBrowserClient } from "@/lib/supabase";
-import type { ListProjectRecord, PillState, ProjectAsset, ProjectRecord } from "@/lib/types";
+import type { Geometry, ListProjectRecord, MapBounds, PillState, ProjectAsset, ProjectRecord } from "@/lib/types";
+
+function coordInBounds(lat: number, lng: number, b: MapBounds): boolean {
+  return lat >= b.south && lat <= b.north && lng >= b.west && lng <= b.east;
+}
+
+function geometryInBounds(geometry: Geometry, b: MapBounds): boolean {
+  if (geometry.type === "Point") {
+    return coordInBounds(geometry.coordinates[1], geometry.coordinates[0], b);
+  }
+  const lines = geometry.type === "LineString"
+    ? [geometry.coordinates]
+    : geometry.coordinates;
+  return lines.some((line) => line.some(([lng, lat]) => coordInBounds(lat, lng, b)));
+}
 
 function toListProject({ raw: _raw, geometry: _geo, ...rest }: ProjectRecord) {
   return rest;
@@ -50,6 +64,7 @@ export function AppShell() {
   const [allProjects, setAllProjects] = useState<ProjectRecord[]>([]);
   const [pills, setPills] = useState<PillState>(DEFAULT_PILLS);
   const [search, setSearch] = useState("");
+  const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null);
   const [selectedAssets, setSelectedAssets] = useState<ProjectAsset[]>([]);
 
@@ -81,6 +96,7 @@ export function AppShell() {
       const hay = `${p.name} ${p.description ?? ""} ${p.mode ?? ""}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
+    if (mapBounds && !geometryInBounds(p.geometry, mapBounds)) return false;
     return true;
   });
 
@@ -89,7 +105,7 @@ export function AppShell() {
 
   return (
     <>
-      <MapWrapper features={projects} pills={pills} selectedId={selectedId} />
+      <MapWrapper features={projects} pills={pills} selectedId={selectedId} onBoundsChange={setMapBounds} />
       <BottomDrawer
         features={listProjects}
         pills={pills}
