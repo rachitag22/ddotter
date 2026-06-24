@@ -31,12 +31,10 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
-    "@browserbasehq/sdk": "^2.14.1",
     "@types/google.maps": "^3.65.2",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
-    "playwright-core": "^1.61.0",
     "tsx": "^4.22.4",
     "typescript": "^5.9.3"
   }
