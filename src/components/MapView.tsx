@@ -20,7 +20,7 @@ type RawSeg = { facility: string | null; label: string | null; coordinates?: [nu
 
 function getSegments(raw: Record<string, unknown>): RawSeg[] | null {
   const s = raw._segments;
-  if (!Array.isArray(s) || s.length < 2) return null;
+  if (!Array.isArray(s) || s.length === 0) return null;
   if (!s.some((seg) => Array.isArray((seg as RawSeg).coordinates) && (seg as RawSeg).coordinates!.length > 0)) return null;
   return s as RawSeg[];
 }
@@ -306,11 +306,13 @@ export function MapView({
         const fill = projectColor(project.status);
         const onClick = makeOnClick(project.id);
 
-        // Bike lanes: render each segment with facility color + optional tooltip
+        // Bike lanes: render each segment with facility color + optional tooltip.
+        // A transparent backdrop on the merged geometry makes the full route
+        // clickable even across gaps between segments (e.g. at intersections).
         if (project.source_type === "bike_lane") {
           const segs = getSegments(project.raw);
           if (segs) {
-            return segs.flatMap((seg, i) => {
+            const segElements = segs.flatMap((seg, i) => {
               const coords = seg.coordinates;
               if (!coords?.length) return [];
               const path = coords.map(([lng, lat]) => ({ lat, lng }));
@@ -338,6 +340,29 @@ export function MapView({
                 ),
               ].filter(Boolean) as React.ReactElement[];
             });
+
+            if (segElements.length > 0) {
+              // Add transparent backdrop over merged geometry for gap-click coverage
+              const backdropLines =
+                project.geometry.type === "LineString"
+                  ? [project.geometry.coordinates]
+                  : project.geometry.type === "MultiLineString"
+                  ? project.geometry.coordinates
+                  : [];
+              const backdrops = backdropLines.map((line, li) => (
+                <GmPolyline
+                  key={`${project.id}-bd-${li}`}
+                  path={line.map(([lng, lat]) => ({ lat, lng }))}
+                  color={fill}
+                  opacity={0}
+                  weight={mapStyles.polyline.selectedSegmentWeight + 4}
+                  zIndex={mapStyles.polyline.zIndex - 1}
+                  onClick={onClick}
+                />
+              ));
+              return [...backdrops, ...segElements];
+            }
+            // Fall through to geometry if no segment coordinates resolved
           }
         }
 

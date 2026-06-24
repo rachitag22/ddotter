@@ -135,9 +135,40 @@ curl -X GET "https://ddotter.vercel.app/api/sync-bike-network?only=bike_lane_inv
 | `ANTHROPIC_API_KEY` | Required for LLM | Gates all Claude calls; `/api/enrich` returns 500 without it |
 | `LABEL_CLEAN_LIMIT` | Optional | Max labels cleaned per sync. **Default 10** (safe). Set `-1` for unlimited. |
 | `ENRICH_LIMIT` | Optional | Max records enriched per `/api/enrich` call. **Default 10** (safe). Set `-1` for unlimited. |
+| `SCRAPE_LIMIT` | Optional | Max projects scraped per `/api/scrape` call. **Default 5** (safe). Set `-1` for unlimited. |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Yes | Google Maps JavaScript API key; must have Dynamic Maps enabled |
+| `BROWSERBASE_API_KEY` | Optional | Enables `scripts/scrape-browserbase.mjs` for JS-rendered project pages |
+| `BROWSERBASE_PROJECT_ID` | Optional | Browserbase project ID (required alongside `BROWSERBASE_API_KEY`) |
 
-Both limit vars accept `-1` for unlimited; query params (`?label_limit=N`, `?limit=N`) can lower but not raise the env ceiling.
+All limit vars accept `-1` for unlimited; query params (`?label_limit=N`, `?limit=N`) can lower but not raise the env ceiling.
+
+## Scraping and enrichment
+
+### Run everything (catch-up)
+```bash
+# Enrich all un-enriched projects
+curl -X GET "https://ddotter.vercel.app/api/enrich?limit=-1" -H "Authorization: Bearer <SYNC_SECRET>"
+
+# Scrape all projects with official_url
+curl -X GET "https://ddotter.vercel.app/api/scrape?limit=-1&source_type=bike_lane" -H "Authorization: Bearer <SYNC_SECRET>"
+curl -X GET "https://ddotter.vercel.app/api/scrape?limit=-1&source_type=capital_project" -H "Authorization: Bearer <SYNC_SECRET>"
+curl -X GET "https://ddotter.vercel.app/api/scrape?limit=-1&source_type=trail_project" -H "Authorization: Bearer <SYNC_SECRET>"
+```
+
+### Browserbase (JS-rendered pages)
+
+Plain fetch skips pages where the rendered body is < 300 chars of visible text.  Use the
+standalone Browserbase script for those:
+
+```bash
+# Scrape thin-content bike lanes (requires BROWSERBASE_API_KEY + BROWSERBASE_PROJECT_ID in .env.local)
+pnpm scrape:bb                         # 3 projects (default)
+pnpm scrape:bb -- --limit=-1           # all projects
+pnpm scrape:bb -- --source=capital_project --limit=10
+pnpm scrape:bb -- --id=<project-id> --force
+```
+
+The script queries Supabase directly (no Next.js server needed) and upserts results to `project_assets`.
 
 ## Page structure
 
