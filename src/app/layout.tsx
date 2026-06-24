@@ -4,7 +4,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DDOT Advocacy Map",
+  title: "DC Bike Map",
   description: "Discover DC transportation projects and submit feedback.",
 };
 
