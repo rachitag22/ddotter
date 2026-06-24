@@ -49,6 +49,7 @@ export function AppShell() {
 
   const [allProjects, setAllProjects] = useState<ProjectRecord[]>([]);
   const [pills, setPills] = useState<PillState>(DEFAULT_PILLS);
+  const [search, setSearch] = useState("");
   const [selectedProject, setSelectedProject] = useState<ProjectRecord | null>(null);
   const [selectedAssets, setSelectedAssets] = useState<ProjectAsset[]>([]);
 
@@ -73,9 +74,15 @@ export function AppShell() {
     return () => { cancelled = true; };
   }, [selectedId]);
 
-  const projects = allProjects.filter(
-    (p) => (pills.building && p.status === "active") || (pills.planned && p.status === "planned"),
-  );
+  const projects = allProjects.filter((p) => {
+    if (!((pills.building && p.status === "active") || (pills.planned && p.status === "planned"))) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const hay = `${p.name} ${p.description ?? ""} ${p.mode ?? ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
 
   const listProjects: ListProjectRecord[] = projects.map(toListProject);
   const listSelected = selectedProject ? toListProject(selectedProject) : null;
@@ -87,6 +94,8 @@ export function AppShell() {
         features={listProjects}
         pills={pills}
         onPillChange={setPills}
+        search={search}
+        onSearchChange={setSearch}
         selectedId={selectedId}
         selectedFeature={listSelected}
         selectedAssets={selectedAssets}

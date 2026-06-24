@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { ProjectAssets } from "@/components/ProjectAssets";
 import { FacilityTypeInfo } from "@/components/FacilityTypeInfo";
@@ -40,6 +40,8 @@ export function BottomDrawer({
   features,
   pills,
   onPillChange,
+  search,
+  onSearchChange,
   selectedId,
   selectedFeature,
   selectedAssets = [],
@@ -47,12 +49,15 @@ export function BottomDrawer({
   features: ListProjectRecord[];
   pills: PillState;
   onPillChange: (next: PillState) => void;
+  search: string;
+  onSearchChange: (v: string) => void;
   selectedId?: string;
   selectedFeature?: ListProjectRecord | null;
   selectedAssets?: ProjectAsset[];
 }) {
   const isDetail = !!selectedFeature;
   const [snapState, setSnapState] = useState<DrawerState>(isDetail ? "preview" : "peek");
+  const [copied, setCopied] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ startY: number; startTranslate: number } | null>(null);
   const translateRef = useRef(0);
@@ -110,6 +115,15 @@ export function BottomDrawer({
     applySnap(newState);
   }
 
+  const copyPermalink = useCallback(() => {
+    if (!selectedFeature) return;
+    const url = `${window.location.origin}/projects/${selectedFeature.id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [selectedFeature]);
+
   const closeUrl = buildCloseUrl();
 
   return (
@@ -154,33 +168,44 @@ export function BottomDrawer({
 
         {/* Pill filter bar */}
         {!isDetail && (
-          <div className="pill-bar">
-            <button
-              type="button"
-              className={`pill pill--active${pills.active ? " pill--on" : ""}`}
-              onClick={() => onPillChange({ ...pills, active: !pills.active })}
-            >
-              <span className="pill-dot" />
-              Active
-            </button>
-            <FacilityTypeInfo />
-            <button
-              type="button"
-              className={`pill pill--building${pills.building ? " pill--on" : ""}`}
-              onClick={() => onPillChange({ ...pills, building: !pills.building })}
-            >
-              <span className="pill-dot" />
-              Building
-            </button>
-            <button
-              type="button"
-              className={`pill pill--planned${pills.planned ? " pill--on" : ""}`}
-              onClick={() => onPillChange({ ...pills, planned: !pills.planned })}
-            >
-              <span className="pill-dot" />
-              Planned
-            </button>
-          </div>
+          <>
+            <div className="pill-bar">
+              <button
+                type="button"
+                className={`pill pill--active${pills.active ? " pill--on" : ""}`}
+                onClick={() => onPillChange({ ...pills, active: !pills.active })}
+              >
+                <span className="pill-dot" />
+                Active
+              </button>
+              <FacilityTypeInfo />
+              <button
+                type="button"
+                className={`pill pill--building${pills.building ? " pill--on" : ""}`}
+                onClick={() => onPillChange({ ...pills, building: !pills.building })}
+              >
+                <span className="pill-dot" />
+                Building
+              </button>
+              <button
+                type="button"
+                className={`pill pill--planned${pills.planned ? " pill--on" : ""}`}
+                onClick={() => onPillChange({ ...pills, planned: !pills.planned })}
+              >
+                <span className="pill-dot" />
+                Planned
+              </button>
+            </div>
+            <div className="drawer-search-wrap">
+              <input
+                className="drawer-search"
+                type="search"
+                placeholder="Search projects…"
+                value={search}
+                onChange={(e) => onSearchChange(e.target.value)}
+              />
+            </div>
+          </>
         )}
       </div>
 
@@ -222,9 +247,16 @@ export function BottomDrawer({
               </a>
             )}
             <ProjectAssets assets={selectedAssets} />
-            <p className="drawer-permalink">
+            <div className="drawer-permalink">
               <Link href={`/projects/${selectedFeature.id}`}>Permanent link ↗</Link>
-            </p>
+              <button
+                type="button"
+                className={`permalink-copy-btn${copied ? " copied" : ""}`}
+                onClick={copyPermalink}
+              >
+                {copied ? "Copied!" : "Copy link"}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="project-list">

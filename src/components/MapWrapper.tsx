@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { APIProvider } from "@vis.gl/react-google-maps";
+import { MapLegend } from "@/components/MapLegend";
 import type { PillState, ProjectRecord } from "@/lib/types";
 
 const GOOGLE_MAPS_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "";
@@ -23,6 +24,7 @@ export function MapWrapper({
   return (
     <APIProvider apiKey={GOOGLE_MAPS_KEY}>
       <MapView features={features} pills={pills} selectedId={selectedId} />
+      <MapLegend pills={pills} />
     </APIProvider>
   );
 }

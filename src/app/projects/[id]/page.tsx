@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { CopyButton } from "@/components/CopyButton";
 import { ProjectAssets } from "@/components/ProjectAssets";
 import { SegmentList } from "@/components/SegmentList";
 import { sourceTypeLabel } from "@/lib/design";
@@ -52,6 +53,9 @@ export default async function ProjectDetail({ params }: PageProps) {
           </a>
         )}
         <ProjectAssets assets={assets} />
+        <div className="detail-permalink">
+          <CopyButton path={`/projects/${id}`} />
+        </div>
       </article>
     </main>
   );
