@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getSupabaseServerClient, hasSupabaseConfig } from "@/lib/supabase";
+import { jurisdictionLabel } from "@/lib/design";
 
 type SourceStats = {
   source_type: string;
@@ -9,15 +10,21 @@ type SourceStats = {
   last_synced: string | null;
 };
 
-async function getStats(): Promise<SourceStats[]> {
-  if (!hasSupabaseConfig()) return [];
+type JurisdictionStats = {
+  jurisdiction: string;
+  total: number;
+  last_synced: string | null;
+};
+
+async function getStats(): Promise<{ byType: SourceStats[]; byJurisdiction: JurisdictionStats[] }> {
+  if (!hasSupabaseConfig()) return { byType: [], byJurisdiction: [] };
 
   const supabase = getSupabaseServerClient();
 
   const [{ data: projects }, { data: assetRows }] = await Promise.all([
     supabase
       .from("projects")
-      .select("id, source_type, description, synced_at")
+      .select("id, source_type, jurisdiction, description, synced_at")
       .in("source_type", ["bike_lane", "trail_project"]),
     supabase
       .from("project_assets")
@@ -27,6 +34,7 @@ async function getStats(): Promise<SourceStats[]> {
   const projectRows = (projects ?? []) as {
     id: string;
     source_type: string;
+    jurisdiction: string | null;
     description: string | null;
     synced_at: string | null;
   }[];
@@ -34,6 +42,7 @@ async function getStats(): Promise<SourceStats[]> {
   const projectsWithAssets = new Set((assetRows ?? []).map((r) => r.project_id as string));
 
   const byType = new Map<string, SourceStats>();
+  const byJurisdiction = new Map<string, JurisdictionStats>();
 
   for (const p of projectRows) {
     const key = p.source_type;
@@ -47,9 +56,29 @@ async function getStats(): Promise<SourceStats[]> {
     if (p.synced_at && (!stat.last_synced || p.synced_at > stat.last_synced)) {
       stat.last_synced = p.synced_at;
     }
+
+    if (p.source_type === "bike_lane" && p.jurisdiction) {
+      const jkey = p.jurisdiction;
+      if (!byJurisdiction.has(jkey)) {
+        byJurisdiction.set(jkey, { jurisdiction: jkey, total: 0, last_synced: null });
+      }
+      const jstat = byJurisdiction.get(jkey)!;
+      jstat.total++;
+      if (p.synced_at && (!jstat.last_synced || p.synced_at > jstat.last_synced)) {
+        jstat.last_synced = p.synced_at;
+      }
+    }
   }
 
-  return Array.from(byType.values()).sort((a, b) => a.source_type.localeCompare(b.source_type));
+  const jurisdictionOrder = ["dc", "arlington", "alexandria", "fairfax", "vdot", "montgomery", "pgcounty", "mdot"];
+  const sortedJurisdictions = Array.from(byJurisdiction.values()).sort(
+    (a, b) => jurisdictionOrder.indexOf(a.jurisdiction) - jurisdictionOrder.indexOf(b.jurisdiction),
+  );
+
+  return {
+    byType: Array.from(byType.values()).sort((a, b) => a.source_type.localeCompare(b.source_type)),
+    byJurisdiction: sortedJurisdictions,
+  };
 }
 
 function pct(n: number, d: number) {
@@ -68,7 +97,7 @@ const SOURCE_LABEL: Record<string, string> = {
 };
 
 export default async function StatusPage() {
-  const stats = await getStats();
+  const { byType: stats, byJurisdiction } = await getStats();
 
   const totals = stats.reduce(
     (acc, s) => ({
@@ -139,6 +168,30 @@ export default async function StatusPage() {
           ))}
         </tbody>
       </table>
+
+      {byJurisdiction.length > 0 && (
+        <>
+          <h2 className="status-section-title">Bike lanes by jurisdiction</h2>
+          <table className="status-table">
+            <thead>
+              <tr>
+                <th>Jurisdiction</th>
+                <th>Segments</th>
+                <th>Last synced</th>
+              </tr>
+            </thead>
+            <tbody>
+              {byJurisdiction.map((j) => (
+                <tr key={j.jurisdiction}>
+                  <td>{jurisdictionLabel[j.jurisdiction] ?? j.jurisdiction}</td>
+                  <td>{j.total.toLocaleString()}</td>
+                  <td>{fmtDate(j.last_synced)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
     </main>
   );
 }

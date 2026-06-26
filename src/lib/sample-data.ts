@@ -8,6 +8,7 @@ export const sampleProjects: ProjectRecord[] = [
     name: "Protected Bike Lane Safety Upgrades",
     status: "planned",
     ward: "5",
+    jurisdiction: null,
     mode: "bike",
     description:
       "Concept project for safer north-south bike access with intersection daylighting and protected space at key blocks.",
@@ -26,6 +27,7 @@ export const sampleProjects: ProjectRecord[] = [
     name: "Metropolitan Branch Trail Connection",
     status: "active",
     ward: "4",
+    jurisdiction: null,
     mode: "trail",
     description:
       "Trail segment improvements focused on closing a neighborhood access gap and improving crossings.",
@@ -51,6 +53,7 @@ export const sampleProjects: ProjectRecord[] = [
     name: "Neighborhood Traffic Box Art",
     status: "complete",
     ward: "1",
+    jurisdiction: null,
     mode: "art",
     description:
       "Completed streetscape art installation near a high-foot-traffic commercial corridor.",

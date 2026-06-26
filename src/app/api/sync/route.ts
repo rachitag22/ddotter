@@ -1,5 +1,17 @@
 import { NextResponse } from "next/server";
-import { fetchArtInstallations, fetchBikeLanes, fetchCapitalProjects, fetchTrailProjects } from "@/lib/arcgis";
+import {
+  fetchArtInstallations,
+  fetchBikeLanes,
+  fetchCapitalProjects,
+  fetchTrailProjects,
+  fetchArlingtonBikeLanes,
+  fetchAlexandriaBikeLanes,
+  fetchFairfaxBikeLanes,
+  fetchVdotBikeLanes,
+  fetchMontgomeryBikeLanes,
+  fetchPgCountyBikeLanes,
+  fetchMdotBikeLanes,
+} from "@/lib/arcgis";
 import { hasSupabaseConfig } from "@/lib/supabase";
 import { getSupabaseSyncClient } from "@/lib/supabase";
 import type { ProjectRecord, SourceType } from "@/lib/types";
@@ -42,7 +54,11 @@ async function preserveEnrichedDescriptions(
   });
 }
 
-async function syncSource(sourceType: SourceType, getRecords: () => Promise<ProjectRecord[]>) {
+async function syncSource(
+  sourceType: SourceType,
+  getRecords: () => Promise<ProjectRecord[]>,
+  options?: { jurisdiction?: string },
+) {
   const startedAt = new Date().toISOString();
   const supabase = getSupabaseSyncClient();
 
@@ -59,14 +75,21 @@ async function syncSource(sourceType: SourceType, getRecords: () => Promise<Proj
         .upsert(records, { onConflict: "id" });
       if (upsertError) throw upsertError;
 
-      // Delete stale records for this source after the successful upsert.
-      // Current records get a fresh synced_at, which avoids sending thousands
-      // of IDs through a PostgREST filter for larger sources.
-      const { error: deleteError } = await supabase
-        .from("projects")
-        .delete()
-        .eq("source_type", sourceType)
-        .lt("synced_at", startedAt);
+      // Delete stale records scoped to this source (and jurisdiction if provided).
+      // Current records get a fresh synced_at, which avoids sending thousands of
+      // IDs through a PostgREST filter for larger sources.
+      const { error: deleteError } = options?.jurisdiction !== undefined
+        ? await supabase
+            .from("projects")
+            .delete()
+            .eq("source_type", sourceType)
+            .eq("jurisdiction", options.jurisdiction)
+            .lt("synced_at", startedAt)
+        : await supabase
+            .from("projects")
+            .delete()
+            .eq("source_type", sourceType)
+            .lt("synced_at", startedAt);
       if (deleteError) throw deleteError;
     }
 
@@ -130,13 +153,36 @@ async function handleSync(request: Request) {
   const resolvedLabelLimit = Math.min(effectiveEnvLabel, effectiveQueryLabel);
   const labelLimit = resolvedLabelLimit === Infinity ? undefined : resolvedLabelLimit;
 
-  const [capitalProjects, bikeLanes, trailProjects, artInstallations] = await Promise.all([
+  const [
+    capitalProjects,
+    bikeLanes,
+    trailProjects,
+    artInstallations,
+    arlingtonLanes,
+    alexandriaLanes,
+    fairfaxLanes,
+    vdotLanes,
+    montgomeryLanes,
+    pgCountyLanes,
+    mdotLanes,
+  ] = await Promise.all([
     syncSource("capital_project", fetchCapitalProjects),
-    syncSource("bike_lane", () => fetchBikeLanes({ labelLimit })),
+    syncSource("bike_lane", () => fetchBikeLanes({ labelLimit }), { jurisdiction: "dc" }),
     syncSource("trail_project", fetchTrailProjects),
     syncSource("art_installation", fetchArtInstallations),
+    syncSource("bike_lane", fetchArlingtonBikeLanes,  { jurisdiction: "arlington"  }),
+    syncSource("bike_lane", fetchAlexandriaBikeLanes, { jurisdiction: "alexandria" }),
+    syncSource("bike_lane", fetchFairfaxBikeLanes,    { jurisdiction: "fairfax"    }),
+    syncSource("bike_lane", fetchVdotBikeLanes,       { jurisdiction: "vdot"       }),
+    syncSource("bike_lane", fetchMontgomeryBikeLanes, { jurisdiction: "montgomery" }),
+    syncSource("bike_lane", fetchPgCountyBikeLanes,   { jurisdiction: "pgcounty"   }),
+    syncSource("bike_lane", fetchMdotBikeLanes,       { jurisdiction: "mdot"       }),
   ]);
-  const sources = [capitalProjects, bikeLanes, trailProjects, artInstallations];
+  const sources = [
+    capitalProjects, bikeLanes, trailProjects, artInstallations,
+    arlingtonLanes, alexandriaLanes, fairfaxLanes, vdotLanes,
+    montgomeryLanes, pgCountyLanes, mdotLanes,
+  ];
 
   return NextResponse.json({
     ok: sources.every((source) => source.status === "success"),

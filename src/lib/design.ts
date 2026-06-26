@@ -31,6 +31,18 @@ export const sourceTypeLabel: Record<string, string> = {
   art_installation: "Art / memorial",
 };
 
+/** Human-readable label keyed by jurisdiction. */
+export const jurisdictionLabel: Record<string, string> = {
+  dc:         "Washington DC",
+  arlington:  "Arlington VA",
+  alexandria: "Alexandria VA",
+  fairfax:    "Fairfax County VA",
+  vdot:       "Virginia (VDOT)",
+  montgomery: "Montgomery County MD",
+  pgcounty:   "Prince George's County MD",
+  mdot:       "Maryland (MDOT)",
+};
+
 export const facilityTypeLabel: Record<FacilityType, string> = {
   protected:      "Protected",
   dual_protected: "Dual protected",
