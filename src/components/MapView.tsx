@@ -334,6 +334,7 @@ export function MapView({
         // Bike lanes: render each segment with facility color + optional tooltip.
         // A transparent backdrop on the merged geometry makes the full route
         // clickable even across gaps between segments (e.g. at intersections).
+        // VA/MD lanes without _segments fall through to the flat-color path below.
         if (project.source_type === "bike_lane") {
           const segs = getSegments(project.raw);
           if (segs) {
@@ -387,7 +388,37 @@ export function MapView({
               ));
               return [...backdrops, ...segElements];
             }
-            // Fall through to geometry if no segment coordinates resolved
+            // Fall through to flat-color rendering if no segment coordinates resolved
+          }
+
+          // Flat-color fallback for bike lanes without per-segment data (e.g. VA/MD jurisdictions)
+          const laneColor = facilityColor(project.mode);
+          const { geometry } = project;
+          if (geometry.type === "LineString") {
+            return [
+              <GmPolyline
+                key={`${project.id}-${isSelected}`}
+                path={geometry.coordinates.map(([lng, lat]) => ({ lat, lng }))}
+                color={laneColor}
+                opacity={isSelected ? mapStyles.polyline.selectedFeatureOpacity : isDeselected ? mapStyles.polyline.dimOpacity : mapStyles.polyline.featureOpacity}
+                weight={isSelected ? mapStyles.polyline.selectedFeatureWeight : mapStyles.polyline.featureWeight}
+                zIndex={isSelected ? mapStyles.polyline.selectedZIndex : mapStyles.polyline.zIndex}
+                onClick={onClick}
+              />,
+            ];
+          }
+          if (geometry.type === "MultiLineString") {
+            return geometry.coordinates.map((line, li) => (
+              <GmPolyline
+                key={`${project.id}-line-${li}-${isSelected}`}
+                path={line.map(([lng, lat]) => ({ lat, lng }))}
+                color={laneColor}
+                opacity={isSelected ? mapStyles.polyline.selectedFeatureOpacity : isDeselected ? mapStyles.polyline.dimOpacity : mapStyles.polyline.featureOpacity}
+                weight={isSelected ? mapStyles.polyline.selectedFeatureWeight : mapStyles.polyline.featureWeight}
+                zIndex={isSelected ? mapStyles.polyline.selectedZIndex : mapStyles.polyline.zIndex}
+                onClick={onClick}
+              />
+            ));
           }
         }
 

@@ -29,6 +29,26 @@ const PLANNED_MULTI_USE_TRAILS_URL =
 const PUBLIC_ART_URL =
   "https://maps2.dcgis.dc.gov/dcgis/rest/services/DCGIS_DATA/Cultural_and_Society_WebMercator/MapServer/55/query";
 
+// ─── Regional VA/MD ArcGIS sources ───────────────────────────────────────────
+const ARLINGTON_BIKE_URL =
+  "https://arlgis.arlingtonva.us/arcgis/rest/services/Open_Data/od_Bike_Route_Lines/FeatureServer/0/query";
+const ALEXANDRIA_BIKE_URL =
+  "https://services.arcgis.com/0L95CJ0VTaxqcmED/arcgis/rest/services/TRANSPORTATION_bicycle_facilities/FeatureServer/0/query";
+const FAIRFAX_BIKE_URL =
+  "https://www.fairfaxcounty.gov/gispub2/rest/services/FCDOT/Transportation/MapServer/38/query";
+// VDOT/MDOT are statewide — always use DC_METRO_BBOX to limit features
+const VDOT_BIKE_URL =
+  "https://services1.arcgis.com/ew4gfvr0tWZCLwst/arcgis/rest/services/VDOTBicycleFacilities/FeatureServer/0/query";
+const MONTGOMERY_BIKE_URL =
+  "https://services1.arcgis.com/yonFSo6pHqSswPro/arcgis/rest/services/Bikeways/FeatureServer/0/query";
+const PGCOUNTY_BIKE_URL =
+  "https://gisonline.princegeorgescountymd.gov/arcgis/rest/services/DPWT/BikeLaneInventory/MapServer/0/query";
+const MDOT_BIKE_URL =
+  "https://geodata.md.gov/imap/rest/services/Transportation/MD_BikewayNetworks/FeatureServer/0/query";
+
+// Bounding box limiting VDOT/MDOT statewide datasets to the DC metro area
+const DC_METRO_BBOX: [number, number, number, number] = [-78, 38.5, -76.5, 39.5];
+
 function asString(value: unknown) {
   if (value === null || value === undefined || value === "") return null;
   return String(value);
@@ -101,6 +121,7 @@ function normalizeCapitalProject(feature: ArcGisFeature): ProjectRecord | null {
     name,
     status: normalizeStatus(raw.Status),
     ward: asString(raw.Ward),
+    jurisdiction: null,
     mode: asString(raw.WorkType),
     description: asString(raw.Description) ?? asString(raw.Label),
     timeline_start: asDate(raw.EstimatedStartDate),
@@ -135,6 +156,7 @@ function normalizeBikeLane(feature: ArcGisFeature): ProjectRecord | null {
     name,
     status: normalizeStatus(raw.ProjectWorkStatus),
     ward: null,
+    jurisdiction: "dc",
     mode: asString(raw.Facility) ?? asString(raw.Asset) ?? "Bike lane",
     description: asString(raw.Description) ?? label,
     timeline_start: asDate(raw.CreatedDate),
@@ -161,6 +183,7 @@ function normalizeExistingTrail(feature: ArcGisFeature): ProjectRecord | null {
     name,
     status: "complete",
     ward: asString(raw.WARDS),
+    jurisdiction: null,
     mode: asString(raw.TRAIL_CLASS) ?? asString(raw.SURFACE_TYPE) ?? "Trail",
     description: [
       asString(raw.TRAIL_SEGMENT) ? `Segment: ${asString(raw.TRAIL_SEGMENT)}` : null,
@@ -193,6 +216,7 @@ function normalizePlannedTrail(feature: ArcGisFeature): ProjectRecord | null {
     name,
     status: normalizeStatus(raw.STATUS),
     ward: asString(raw.WARDS),
+    jurisdiction: null,
     mode: asString(raw.USE_TYPE) ?? "Planned multi-use trail",
     description: [
       asString(raw.TRAIL_SEGMENT) ? `Segment: ${asString(raw.TRAIL_SEGMENT)}` : null,
@@ -234,6 +258,7 @@ function normalizePublicArt(feature: ArcGisFeature): ProjectRecord | null {
     name,
     status: normalizeStatus(pick(raw, "STATUS", "DCGIS.PLACE_NAMES_PT.STATUS")),
     ward: asString(pick(raw, "WARD", "DCGIS.ADDRESSES_PT.WARD"))?.replace(/^Ward\s+/i, "") ?? null,
+    jurisdiction: null,
     mode: medium ?? "Public art",
     description: descParts.length ? descParts.join(" ") : asString(raw.DESCRIPTION),
     timeline_start: raw.YEARINSTALLED ? `${asString(raw.YEARINSTALLED)}-01-01` : asDate(pick(raw, "CREATED_DATE", "DCGIS.PLACE_NAMES_PT.CREATED_DATE")),
@@ -246,7 +271,10 @@ function normalizePublicArt(feature: ArcGisFeature): ProjectRecord | null {
   };
 }
 
-async function fetchArcGisFeatures(url: string, options: { paginate?: boolean } = {}) {
+async function fetchArcGisFeatures(
+  url: string,
+  options: { paginate?: boolean; bbox?: [number, number, number, number] } = {},
+) {
   const paginate = options.paginate ?? true;
   const pageSize = 1000;
   const features: ArcGisFeature[] = [];
@@ -259,6 +287,14 @@ async function fetchArcGisFeatures(url: string, options: { paginate?: boolean } 
       outSR: "4326",
       f: "geojson",
     });
+
+    if (options.bbox) {
+      const [xmin, ymin, xmax, ymax] = options.bbox;
+      params.set("geometry", JSON.stringify({ xmin, ymin, xmax, ymax, spatialReference: { wkid: 4326 } }));
+      params.set("geometryType", "esriGeometryEnvelope");
+      params.set("spatialRel", "esriSpatialRelIntersects");
+      params.set("inSR", "4326");
+    }
 
     if (paginate) {
       params.set("resultOffset", String(offset));
@@ -395,6 +431,95 @@ export async function fetchTrailProjects() {
 export async function fetchArtInstallations() {
   const features = await fetchArcGisFeatures(PUBLIC_ART_URL, { paginate: false });
   return features.map(normalizePublicArt).filter((feature): feature is ProjectRecord => Boolean(feature));
+}
+
+// ─── Regional VA/MD normalize helpers ────────────────────────────────────────
+
+function makeRegionalBikeLane(
+  jurisdiction: string,
+  idPrefix: string,
+  feature: ArcGisFeature,
+): ProjectRecord | null {
+  const raw = feature.properties;
+  const objectId = asString(pick(raw, "OBJECTID", "ObjectID", "FID"));
+  const name =
+    asString(pick(raw, "STREETNAME", "StreetName", "STREET_NAME", "ROUTE_NAME", "RouteName", "ROUTE_NM", "NAME")) ??
+    `${jurisdiction}-${objectId}`;
+
+  if (!objectId || !feature.geometry) return null;
+
+  const facilityRaw = asString(
+    pick(raw, "BIKEFACILITY", "FACILITY_TYPE", "FacilityType", "BIKELANE_TYPE", "LaneType", "BIKEWAY_TYPE", "BIKEWAYTYPE", "Facility", "FACILITYTYPE"),
+  );
+  const statusRaw = asString(pick(raw, "STATUS", "Status", "BIKESTATUS", "CONDITION"));
+
+  return {
+    id: `${idPrefix}-${objectId}`,
+    source_type: "bike_lane",
+    source_id: `${jurisdiction}-${objectId}`,
+    name,
+    status: normalizeStatus(statusRaw ?? "existing"),
+    ward: null,
+    jurisdiction,
+    mode: facilityRaw,
+    description: null,
+    timeline_start: null,
+    timeline_end: null,
+    cost: null,
+    official_url: null,
+    geometry: feature.geometry,
+    raw,
+    synced_at: new Date().toISOString(),
+  };
+}
+
+export async function fetchArlingtonBikeLanes(): Promise<ProjectRecord[]> {
+  const features = await fetchArcGisFeatures(ARLINGTON_BIKE_URL);
+  return features
+    .map((f) => makeRegionalBikeLane("arlington", "arlington", f))
+    .filter((r): r is ProjectRecord => r !== null);
+}
+
+export async function fetchAlexandriaBikeLanes(): Promise<ProjectRecord[]> {
+  const features = await fetchArcGisFeatures(ALEXANDRIA_BIKE_URL);
+  return features
+    .map((f) => makeRegionalBikeLane("alexandria", "alexandria", f))
+    .filter((r): r is ProjectRecord => r !== null);
+}
+
+export async function fetchFairfaxBikeLanes(): Promise<ProjectRecord[]> {
+  const features = await fetchArcGisFeatures(FAIRFAX_BIKE_URL);
+  return features
+    .map((f) => makeRegionalBikeLane("fairfax", "fairfax", f))
+    .filter((r): r is ProjectRecord => r !== null);
+}
+
+export async function fetchVdotBikeLanes(): Promise<ProjectRecord[]> {
+  const features = await fetchArcGisFeatures(VDOT_BIKE_URL, { bbox: DC_METRO_BBOX });
+  return features
+    .map((f) => makeRegionalBikeLane("vdot", "vdot", f))
+    .filter((r): r is ProjectRecord => r !== null);
+}
+
+export async function fetchMontgomeryBikeLanes(): Promise<ProjectRecord[]> {
+  const features = await fetchArcGisFeatures(MONTGOMERY_BIKE_URL);
+  return features
+    .map((f) => makeRegionalBikeLane("montgomery", "montgomery", f))
+    .filter((r): r is ProjectRecord => r !== null);
+}
+
+export async function fetchPgCountyBikeLanes(): Promise<ProjectRecord[]> {
+  const features = await fetchArcGisFeatures(PGCOUNTY_BIKE_URL);
+  return features
+    .map((f) => makeRegionalBikeLane("pgcounty", "pgcounty", f))
+    .filter((r): r is ProjectRecord => r !== null);
+}
+
+export async function fetchMdotBikeLanes(): Promise<ProjectRecord[]> {
+  const features = await fetchArcGisFeatures(MDOT_BIKE_URL, { bbox: DC_METRO_BBOX });
+  return features
+    .map((f) => makeRegionalBikeLane("mdot", "mdot", f))
+    .filter((r): r is ProjectRecord => r !== null);
 }
 
 export async function fetchAllArcGisFeatures() {

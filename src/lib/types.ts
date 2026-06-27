@@ -13,6 +13,7 @@ export type ProjectRecord = {
   name: string;
   status: ProjectStatus;
   ward: string | null;
+  jurisdiction: string | null;
   mode: string | null;
   description: string | null;
   timeline_start: string | null;

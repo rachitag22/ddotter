@@ -39,10 +39,10 @@ curl -X GET "https://ddotter.vercel.app/api/enrich?limit=10" -H "Authorization: 
 
 | File | Purpose |
 |------|---------|
-| `src/lib/arcgis.ts` | Fetches and normalizes all 5 ArcGIS sources; merges bike lane segments |
+| `src/lib/arcgis.ts` | Fetches and normalizes all DC + 7 regional VA/MD ArcGIS sources; merges DC bike lane segments |
 | `src/lib/enrich.ts` | LLM description synthesis + bike lane label cleaning (Claude Haiku) |
 | `src/lib/types.ts` | `ProjectRecord`, `SourceType`, `Geometry`, `ProjectFilters`, `BikeSegment` |
-| `src/lib/design.ts` | Color tokens, `sourceTypeColor`, `facilityColor`, `mapStyles` |
+| `src/lib/design.ts` | Color tokens, `sourceTypeColor`, `facilityColor`, `mapStyles`, `jurisdictionLabel` |
 | `src/app/api/sync/route.ts` | Sync handler: upsert → delete stale records by timestamp |
 | `src/app/api/enrich/route.ts` | Enrichment handler: fills null descriptions using LLM |
 | `src/app/api/sync-bike-network/route.ts` | Sync handler for `bike_network` table (3 ArcGIS sources) |
@@ -52,12 +52,27 @@ curl -X GET "https://ddotter.vercel.app/api/enrich?limit=10" -H "Authorization: 
 
 ## ArcGIS sources
 
-| Source type | ArcGIS layer | Notes |
-|-------------|-------------|-------|
-| `capital_project` | DDOT/PTP FeatureServer/0 | Point geometry |
-| `bike_lane` | DDOT/BikeLane FeatureServer/0 | Segments merged by `Project` or `RouteName` into MultiLineString; per-segment metadata stored in `raw._segments` |
-| `trail_project` | Transportation_Bikes_Trails MapServer/4 (existing) + /1 (planned) | Both map to same source type; IDs prefixed `trail-existing-` or `trail-planned-` |
-| `art_installation` | Cultural_and_Society MapServer/18 | Point geometry |
+| Source type | Jurisdiction | ArcGIS layer | Notes |
+|-------------|-------------|-------|-------|
+| `capital_project` | dc | DDOT/PTP FeatureServer/0 | Point geometry |
+| `bike_lane` | dc | DDOT/BikeLane FeatureServer/0 | Segments merged by `Project` or `RouteName`; per-segment metadata in `raw._segments` |
+| `bike_lane` | arlington | od_Bike_Route_Lines FeatureServer/0 | arlgis.arlingtonva.us |
+| `bike_lane` | alexandria | TRANSPORTATION_bicycle_facilities FeatureServer/0 | services.arcgis.com |
+| `bike_lane` | fairfax | FCDOT/Transportation MapServer/38 | fairfaxcounty.gov |
+| `bike_lane` | vdot | VDOTBicycleFacilities FeatureServer/0 | Statewide; DC metro bbox filter applied |
+| `bike_lane` | montgomery | Bikeways FeatureServer/0 | Montgomery County open data |
+| `bike_lane` | pgcounty | DPWT/BikeLaneInventory MapServer/0 | Prince George's County |
+| `bike_lane` | mdot | MD_BikewayNetworks FeatureServer/0 | Statewide; DC metro bbox filter applied |
+| `trail_project` | — | Transportation_Bikes_Trails MapServer/4 (existing) + /1 (planned) | IDs prefixed `trail-existing-` or `trail-planned-` |
+| `art_installation` | — | Cultural_and_Society MapServer/18 | Point geometry |
+
+> **VA/MD URL verification**: VDOT and MDOT URLs are best guesses — verify by querying `?f=json` on
+> each endpoint and checking field names. Run `fetchArlingtonBikeLanes()` etc. from a sync trigger and
+> inspect sync_log for any `error` rows.
+
+> **Stale deletion**: `syncSource` accepts `options.jurisdiction`. When set, DELETE is scoped to
+> `source_type = 'bike_lane' AND jurisdiction = '<value>'` so one failing jurisdiction does not wipe
+> another's data. Non-bike-lane sources omit jurisdiction and delete by source_type only.
 
 ## Bike lane segment merging
 
@@ -90,7 +105,7 @@ Overlays (polylines, polygons) are created imperatively via `google.maps.Polylin
 - **`bike_network`** table — purpose-built for bike lanes + trails with proper `facility_type` and `status` enums (see below)
 - **`sync_log`** table — one row per source per sync run, records `records_seen`, `records_upserted`, `status`, `error_message`
 - RLS is enabled; sync writes go through `getSupabaseSyncClient()` which attaches `x-sync-secret` header, verified by `private.sync_request_authorized()` (SHA-256 check against `private.sync_secrets`)
-- Stale records are deleted after each successful upsert: `DELETE WHERE source = X AND synced_at < <run_start>`
+- Stale records are deleted after each successful upsert: `DELETE WHERE source_type = X [AND jurisdiction = Y] AND synced_at < <run_start>`; bike_lane syncs are jurisdiction-scoped so one failing region doesn't wipe another's data
 
 ### `bike_network` table
 
@@ -112,6 +127,13 @@ curl -X GET "https://ddotter.vercel.app/api/sync-bike-network" -H "Authorization
 curl -X GET "https://ddotter.vercel.app/api/sync-bike-network?only=bike_lane_inventory" -H "Authorization: Bearer <SYNC_SECRET>"
 ```
 
+### `projects` table — key columns
+
+| Column | Notes |
+|--------|-------|
+| `jurisdiction` | `dc` · `arlington` · `alexandria` · `fairfax` · `vdot` · `montgomery` · `pgcounty` · `mdot` · `null` (non-bike-lane sources) |
+| `source_type` | `capital_project` · `bike_lane` · `trail_project` · `art_installation` |
+
 ### Migrations (in order)
 
 1. `202606190001_initial_schema.sql` — `features`, `feedback`, `sync_log`, `features_with_feedback` view
@@ -120,6 +142,7 @@ curl -X GET "https://ddotter.vercel.app/api/sync-bike-network?only=bike_lane_inv
 4. `20260620222100_allow_sync_delete_stale_features.sql` — grants DELETE to anon for stale-record cleanup
 5. `20260622002000_bike_network.sql` — `bike_network` table with facility_type + status enums, RLS, indexes
 6. `20260622003000_bike_network_drop_project_source.sql` — drops `bike_lane_project` source; adds `project_id FK → projects(id)`
+7. `20260626001000_add_jurisdiction.sql` — adds `jurisdiction` column; backfills DC bike_lane rows; adds indexes
 
 ## Environment variables
 
